@@ -115,7 +115,10 @@ html, body { margin: 0; padding: 0; background: radial-gradient(ellipse 80% 60% 
 </head>
 <body>
 <div class="shell">
-  <div class="day-pill" id="dayPill">—</div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+    <div class="day-pill" id="dayPill">—</div>
+    <button onclick="toggleTomorrow()" id="tomorrowBtn" style="padding:6px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:999px;color:rgba(255,255,255,0.4);font-family:inherit;font-size:11px;font-weight:700;letter-spacing:0.10em;text-transform:uppercase;cursor:pointer;-webkit-tap-highlight-color:transparent;">Morgen →</button>
+  </div>
   <div class="header">
     <h1 class="title" id="appTitle">Dagelijkse Checklist</h1>
     <button class="icon-btn" onclick="openSettings()" title="Instellingen">
@@ -256,21 +259,24 @@ function ensureToday(){
 function todayTasks(){ return ensureToday().tasks; }
 
 function doCheck(id){
-  const t = todayTasks().find(t=>t.id===id); if(!t) return;
+  const t = currentDayTasks().find(t=>t.id===id); if(!t) return;
   t.done = !t.done; save(); render();
 }
 function doDelete(id){
-  const day = ensureToday();
-  day.tasks = day.tasks.filter(t=>t.id!==id);
+  const dateKey = currentViewDate();
+  if (!state.days[dateKey]) return;
+  state.days[dateKey].tasks = state.days[dateKey].tasks.filter(t=>t.id!==id);
   save(); render();
 }
 function doWater(id, delta){
-  const t = todayTasks().find(t=>t.id===id); if(!t) return;
+  const t = currentDayTasks().find(t=>t.id===id); if(!t) return;
   t.count = Math.max(0,(t.count||0)+delta); save(); render();
 }
 function doAddTask(catId, name){
   const v=(name||'').trim(); if(!v) return;
-  ensureToday().tasks.push({id:uid(),cat:catId,name:v,done:false});
+  const dateKey = currentViewDate();
+  if (!state.days[dateKey]) currentDayTasks(); // ensure day exists
+  state.days[dateKey].tasks.push({id:uid(),cat:catId,name:v,done:false});
   save(); render();
 }
 
@@ -284,15 +290,33 @@ function render(){
 }
 
 function renderPill(){
-  const d=new Date();
-  if(d.getHours()<RESET_HOUR) d.setDate(d.getDate()-1);
+  const d = new Date();
+  if (!viewingTomorrow && d.getHours() < RESET_HOUR) d.setDate(d.getDate()-1);
+  if (viewingTomorrow) { if (d.getHours() >= RESET_HOUR) d.setDate(d.getDate()+1); }
   const dows=['ZONDAG','MAANDAG','DINSDAG','WOENSDAG','DONDERDAG','VRIJDAG','ZATERDAG'];
   const mons=['JAN','FEB','MRT','APR','MEI','JUN','JUL','AUG','SEP','OKT','NOV','DEC'];
-  document.getElementById('dayPill').textContent = dows[d.getDay()]+' '+d.getDate()+' '+mons[d.getMonth()];
+  document.getElementById('dayPill').textContent = (viewingTomorrow ? 'MORGEN · ' : '') + dows[d.getDay()]+' '+d.getDate()+' '+mons[d.getMonth()];
+}
+
+function currentDayTasks(){
+  const dateKey = currentViewDate();
+  if (!state.days[dateKey]) {
+    if (viewingTomorrow) {
+      // Voor morgen: maak een lege dag aan met terugkerende taken
+      state.days[dateKey] = { tasks: state.recurring.map(r => {
+        if(r.water) return {id:uid(),cat:r.cat,name:r.name,water:true,target:r.target||3,count:0,recurringId:r.id};
+        return {id:uid(),cat:r.cat,name:r.name,done:false,recurringId:r.id};
+      })};
+      save();
+    } else {
+      ensureToday();
+    }
+  }
+  return (state.days[dateKey] || {tasks:[]}).tasks;
 }
 
 function renderProgress(){
-  const tasks = todayTasks();
+  const tasks = currentDayTasks();
   let total=0, done=0;
   tasks.forEach(t=>{ total++; if(t.water?t.count>=t.target:t.done) done++; });
   const pct = total ? Math.round(done/total*100) : 0;
@@ -302,6 +326,7 @@ function renderProgress(){
   fill.style.width = pct+'%';
   fill.classList.toggle('done', total>0 && done===total);
   const msg = document.getElementById('heroMsg');
+  if (viewingTomorrow) { msg.textContent = 'Taken voor morgen — voeg toe wat je wilt doen.'; msg.classList.remove('done'); return; }
   if(total===0){ msg.textContent='Geen taken vandaag.'; msg.classList.remove('done'); }
   else if(done===total){ msg.textContent='✓ Alles afgevinkt — sterke dag!'; msg.classList.add('done'); }
   else if(pct>=50){ msg.textContent='Lekker bezig — nog '+(total-done)+' te gaan.'; msg.classList.remove('done'); }
@@ -310,7 +335,7 @@ function renderProgress(){
 
 function renderLists(){
   const wrap = document.getElementById('listsWrap');
-  const tasks = todayTasks();
+  const tasks = currentDayTasks();
   let html = '';
   state.categories.forEach(cat=>{
     const catTasks = tasks.filter(t=>t.cat===cat.id);
@@ -598,13 +623,135 @@ function calcStreak() {
 }
 
 // ============================================================
-// BOOT
+// MORGEN-MODUS
+// ============================================================
+let viewingTomorrow = false;
+
+function tomorrowDate() {
+  const d = new Date();
+  if (d.getHours() < RESET_HOUR) d.setDate(d.getDate()+0); else d.setDate(d.getDate()+1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function currentViewDate() {
+  return viewingTomorrow ? tomorrowDate() : activeDate();
+}
+
+function toggleTomorrow() {
+  viewingTomorrow = !viewingTomorrow;
+  const btn = document.getElementById('tomorrowBtn');
+  btn.textContent = viewingTomorrow ? '← Vandaag' : 'Morgen →';
+  btn.style.color = viewingTomorrow ? '#6ee7b7' : 'rgba(255,255,255,0.4)';
+  btn.style.borderColor = viewingTomorrow ? 'rgba(110,231,183,0.3)' : 'rgba(255,255,255,0.06)';
+  render();
+}
+
+// SUPABASE SYNC
+const SB_URL = 'https://teouxpndvftcswyybfxp.supabase.co';
+const SB_KEY = 'sb_publishable_Ogzh4cjZuJ2RUATM-lsOqA_-R0LzRRW';
+const SB_APP = 'maxxing-dashboard';
+let sbLastJson = null;
+let sbPushTimer = null;
+let sbSuppressHook = false;
+
+async function sbPull() {
+  try {
+    const res = await fetch(SB_URL+'/rest/v1/app_state?key=eq.'+SB_APP+'&select=data', {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY }
+    });
+    if (!res.ok) return false;
+    const rows = await res.json();
+    if (!rows || !rows[0] || !rows[0].data) return false;
+    const remote = rows[0].data;
+    if (remote[LS] !== undefined) {
+      const incoming = JSON.stringify(remote[LS]);
+      const local = localStorage.getItem(LS);
+      if (local !== incoming) {
+        sbSuppressHook = true;
+        localStorage.setItem(LS, incoming);
+        sbSuppressHook = false;
+        return true; // data changed
+      }
+    }
+    return false;
+  } catch(e) { return false; }
+}
+
+async function sbPush() {
+  try {
+    const data = {};
+    [LS, 'maxx_gym_v1', 'maxx_measure_v1'].forEach(k => {
+      const v = localStorage.getItem(k);
+      if (v) try { data[k] = JSON.parse(v); } catch(e) {}
+    });
+    const json = JSON.stringify(data);
+    if (json === sbLastJson) return;
+    const res = await fetch(SB_URL+'/rest/v1/app_state', {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify([{ key: SB_APP, data, updated_at: new Date().toISOString() }])
+    });
+    if (res.ok) sbLastJson = json;
+  } catch(e) {}
+}
+
+function sbSchedulePush() {
+  if (sbSuppressHook) return;
+  clearTimeout(sbPushTimer);
+  sbPushTimer = setTimeout(sbPush, 800);
+}
+
+// Hook save() to trigger push
+const _origSave = save;
+function save() { _origSave(); sbSchedulePush(); }
+
+// Pull when tab becomes visible again
+document.addEventListener('visibilitychange', async () => {
+  if (!document.hidden) {
+    const changed = await sbPull();
+    if (changed) { state = loadState(); ensureToday(); render(); renderChart(); }
+  }
+});
+window.addEventListener('focus', async () => {
+  const changed = await sbPull();
+  if (changed) { state = loadState(); ensureToday(); render(); renderChart(); }
+});
+
+// Push on close
+window.addEventListener('pagehide', () => {
+  const data = {};
+  [LS, 'maxx_gym_v1', 'maxx_measure_v1'].forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v) try { data[k] = JSON.parse(v); } catch(e) {}
+  });
+  fetch(SB_URL+'/rest/v1/app_state', {
+    method: 'POST',
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify([{ key: SB_APP, data, updated_at: new Date().toISOString() }]),
+    keepalive: true
+  }).catch(()=>{});
+});
+
+// ============================================================
+// BOOT — eerst Supabase, dan render
 // ============================================================
 document.getElementById('appTitle').textContent = CONFIG.appTitle;
-ensureToday();
-render();
-renderChart();
-setInterval(()=>{ ensureToday(); render(); renderChart(); }, 60000);
+(async function boot() {
+  // Pull remote data first
+  await sbPull();
+  // Now load state (which includes any remote data)
+  state = loadState();
+  ensureToday();
+  render();
+  renderChart();
+  // Push local data to Supabase
+  sbPush();
+  setInterval(()=>{ ensureToday(); render(); renderChart(); }, 60000);
+})();
 </script>
 </body>
 </html>
