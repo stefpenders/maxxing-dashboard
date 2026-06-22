@@ -217,7 +217,7 @@ function defaultState(){
     history: {}
   };
 }
-function save(){ storeSet(LS, state); }
+function save(){ storeSet(LS, state); if(typeof sbSchedulePush==='function') sbSchedulePush(); }
 let state = loadState();
 
 // ============================================================
@@ -704,10 +704,6 @@ function sbSchedulePush() {
   clearTimeout(sbPushTimer);
   sbPushTimer = setTimeout(sbPush, 800);
 }
-
-// Hook save() to trigger push
-const _origSave = save;
-function save() { _origSave(); sbSchedulePush(); }
 
 // Pull when tab becomes visible again
 document.addEventListener('visibilitychange', async () => {
