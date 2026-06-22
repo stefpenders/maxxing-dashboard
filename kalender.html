@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0b">
+<title>Trainingskalender</title>
+<script src="topbar.js" defer></script>
+<style>
+:root {
+  --bg: #0a0a0b;
+  --bg-card: #111113;
+  --text-1: #ffffff;
+  --text-2: rgba(255,255,255,0.6);
+  --text-3: rgba(255,255,255,0.4);
+  --text-4: rgba(255,255,255,0.25);
+  --border: rgba(255,255,255,0.06);
+  --border-strong: rgba(255,255,255,0.14);
+  --good: #6ee7b7;
+  --warn: #fbbf24;
+  --bad: #ff8a8a;
+  --info: #7DD3FC;
+  --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SF Mono, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, #14141a 0%, #0a0a0b 60%);
+  color: var(--text-1);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  min-height: 100vh;
+}
+.shell { max-width: 720px; margin: 0 auto; padding: 24px 16px 80px; }
+.shell *, .shell *::before { min-width: 0; }
+
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.title { font-size: 22px; font-weight: 700; letter-spacing: -0.015em; margin: 0; }
+
+.divider { display: flex; align-items: center; gap: 16px; margin: 22px 0 14px; }
+.divider:first-of-type { margin-top: 0; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.10); }
+.divider span { font-size: 11px; letter-spacing: 0.22em; font-weight: 600; color: rgba(255,255,255,0.85); }
+
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 20px; margin-bottom: 14px; }
+
+/* View toggle */
+.view-seg { display: flex; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 12px; padding: 4px; gap: 3px; margin-bottom: 14px; }
+.view-btn { flex: 1; padding: 10px 8px; border: none; background: transparent; color: var(--text-3); border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.view-btn.active { background: linear-gradient(180deg, #ffffff 0%, #e8e5dd 100%); color: #0a0a0b; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 4px 12px rgba(0,0,0,0.35); }
+
+/* Period nav */
+.per-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.per-nav button { width: 38px; height: 38px; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: var(--text-2); border-radius: 10px; cursor: pointer; font-size: 18px; -webkit-tap-highlight-color: transparent; }
+.per-nav button:hover { background: rgba(255,255,255,0.08); color: var(--text-1); }
+.per-label { font-size: 15px; font-weight: 700; }
+
+/* Calendar grid */
+.cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px; }
+.cal-dow span { text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-4); text-transform: uppercase; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.cal-cell { aspect-ratio: 1; border-radius: 9px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; position: relative; }
+.cal-cell.empty { background: transparent; border: none; }
+.cal-cell.today { border-color: var(--border-strong); }
+.cal-cell .d { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.cal-cell.trained .d { color: #0a0a0b; font-weight: 700; }
+.cal-dot { width: 5px; height: 5px; border-radius: 50%; }
+/* week view: bigger cells */
+.cal-grid.week .cal-cell { aspect-ratio: auto; min-height: 92px; align-items: stretch; justify-content: flex-start; padding: 8px; }
+.cal-grid.week .cal-cell .d { align-self: flex-end; }
+.cal-week-tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-top: auto; }
+
+/* year heatmap */
+.year-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13px, 1fr)); gap: 3px; }
+.year-cell { aspect-ratio: 1; border-radius: 3px; background: rgba(255,255,255,0.04); }
+
+/* Stats */
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.stat-box { padding: 14px 10px; background: rgba(255,255,255,0.025); border: 1px solid var(--border); border-radius: 12px; text-align: center; }
+.stat-num { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat-num .u { font-size: 12px; color: var(--text-3); font-weight: 500; }
+.stat-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); margin-top: 4px; }
+
+/* Focus breakdown */
+.focus-row { margin-bottom: 12px; }
+.focus-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+.focus-name { font-size: 13px; font-weight: 600; }
+.focus-count { font-size: 12px; color: var(--text-3); font-family: var(--font-mono); }
+.focus-track { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.focus-fill { height: 100%; border-radius: 999px; transition: width 0.4s; }
+
+.empty-note { text-align: center; font-size: 13px; color: var(--text-3); font-style: italic; padding: 24px 0; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-2); }
+.legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <div class="header">
+    <h1 class="title">Trainingskalender</h1>
+  </div>
+
+  <!-- TOTALS -->
+  <div class="stat-grid">
+    <div class="stat-box"><div class="stat-num" id="totalSessions">—</div><div class="stat-lbl">Totaal sessies</div></div>
+    <div class="stat-box"><div class="stat-num" id="totalHours">—<span class="u">u</span></div><div class="stat-lbl">Totale tijd</div></div>
+    <div class="stat-box"><div class="stat-num" id="streak">—</div><div class="stat-lbl">Reeks (weken)</div></div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="divider"><span>KALENDER</span></div>
+  <div class="card">
+    <div class="view-seg" id="viewSeg">
+      <button class="view-btn active" data-view="week">Week</button>
+      <button class="view-btn" data-view="month">Maand</button>
+      <button class="view-btn" data-view="year">Jaar</button>
+    </div>
+
+    <div class="per-nav">
+      <button id="prevBtn" aria-label="Vorige">‹</button>
+      <span class="per-label" id="perLabel">—</span>
+      <button id="nextBtn" aria-label="Volgende">›</button>
+    </div>
+
+    <div id="calWrap"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <!-- PERIOD STATS -->
+  <div class="divider"><span id="periodStatsTitle">DEZE PERIODE</span></div>
+  <div class="card">
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-num" id="perSessions">—</div><div class="stat-lbl">Trainingen</div></div>
+      <div class="stat-box"><div class="stat-num" id="perHours">—<span class="u">u</span></div><div class="stat-lbl">Tijd</div></div>
+      <div class="stat-box"><div class="stat-num" id="perSets">—</div><div class="stat-lbl">Sets</div></div>
+    </div>
+    <div style="font-size:10px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-3);margin:8px 0 12px">Focus — verdeling per soort</div>
+    <div id="focus"></div>
+    <div class="empty-note hidden" id="focusEmpty">Nog geen trainingen in deze periode.</div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  const $ = (id) => document.getElementById(id);
+  const GYM_KEY = 'maxx_gym_v1';
+
+  // Distinct-ish colors per training type, assigned in order of first appearance.
+  const PALETTE = ['#6ee7b7', '#7DD3FC', '#fbbf24', '#B794F4', '#ff8a8a', '#f0883e', '#5eead4', '#a3e635'];
+
+  function loadGym() {
+    try { const r = localStorage.getItem(GYM_KEY); if (r) return JSON.parse(r); } catch (e) {}
+    return null;
+  }
+  const gym = loadGym();
+  const sessions = (gym && Array.isArray(gym.sessions)) ? gym.sessions.slice() : [];
+
+  // Map each dayName to a stable color
+  const typeColors = {};
+  let colorIdx = 0;
+  function colorFor(name) {
+    const key = name || 'Onbekend';
+    if (!typeColors[key]) { typeColors[key] = PALETTE[colorIdx % PALETTE.length]; colorIdx++; }
+    return typeColors[key];
+  }
+  // pre-seed colors from config day order if available
+  if (gym && Array.isArray(gym.days)) gym.days.forEach(d => colorFor(d.name));
+
+  // index sessions by YYYY-MM-DD
+  function dKey(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+  const byDate = {};
+  sessions.forEach(s => {
+    const d = new Date(s.date);
+    const k = dKey(d);
+    (byDate[k] = byDate[k] || []).push(s);
+  });
+
+  // ---------- totals ----------
+  function renderTotals() {
+    $('totalSessions').textContent = sessions.length;
+    const totalMin = sessions.reduce((a, s) => a + (s.durationMin || 0), 0);
+    $('totalHours').innerHTML = (totalMin / 60).toFixed(1) + '<span class="u">u</span>';
+    $('streak').textContent = weekStreak();
+  }
+  // consecutive weeks (incl. current or last) with >=1 session
+  function weekStreak() {
+    if (!sessions.length) return 0;
+    const weekOf = (d) => { const x = new Date(d); const day = (x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x.getTime(); };
+    const weeks = new Set(sessions.map(s => weekOf(new Date(s.date))));
+    let streak = 0;
+    let cur = weekOf(new Date());
+    const WEEK = 7*86400000;
+    if (!weeks.has(cur)) cur -= WEEK; // allow streak ending last week
+    while (weeks.has(cur)) { streak++; cur -= WEEK; }
+    return streak;
+  }
+
+  // ---------- view state ----------
+  let view = 'week';
+  let cursor = new Date(); cursor.setHours(0,0,0,0);
+
+  const DOW = ['ma','di','wo','do','vr','za','zo'];
+  const MON = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+
+  function startOfWeek(d) { const x = new Date(d); const day = (x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x; }
+
+  function render() {
+    $('viewSeg').querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+    if (view === 'week') renderWeek();
+    else if (view === 'month') renderMonth();
+    else renderYear();
+    renderPeriodStats();
+    renderLegend();
+  }
+
+  function cellHTML(date, big) {
+    const k = dKey(date);
+    const ss = byDate[k];
+    const isToday = dKey(new Date()) === k;
+    if (ss && ss.length) {
+      const c = colorFor(ss[0].dayName);
+      if (big) {
+        const tags = ss.map(s => '<span class="cal-week-tag" style="background:' + colorFor(s.dayName) + '22;color:' + colorFor(s.dayName) + '">' + esc(s.dayName || '?') + '</span>').join('');
+        return '<div class="cal-cell trained' + (isToday?' today':'') + '" style="background:' + c + '14;border-color:' + c + '44"><span class="d" style="color:var(--text-1)">' + date.getDate() + '</span>' + tags + '</div>';
+      }
+      return '<div class="cal-cell trained' + (isToday?' today':'') + '" style="background:' + c + ';border-color:' + c + '"><span class="d">' + date.getDate() + '</span></div>';
+    }
+    return '<div class="cal-cell' + (isToday?' today':'') + '"><span class="d">' + date.getDate() + '</span></div>';
+  }
+
+  function renderWeek() {
+    const start = startOfWeek(cursor);
+    const end = new Date(start); end.setDate(end.getDate()+6);
+    $('perLabel').textContent = start.getDate() + ' ' + MON[start.getMonth()].slice(0,3) + ' – ' + end.getDate() + ' ' + MON[end.getMonth()].slice(0,3);
+    let dow = '<div class="cal-dow">' + DOW.map(d => '<span>' + d + '</span>').join('') + '</div>';
+    let cells = '';
+    for (let i = 0; i < 7; i++) { const d = new Date(start); d.setDate(d.getDate()+i); cells += cellHTML(d, true); }
+    $('calWrap').innerHTML = dow + '<div class="cal-grid week">' + cells + '</div>';
+  }
+
+  function renderMonth() {
+    const y = cursor.getFullYear(), m = cursor.getMonth();
+    $('perLabel').textContent = MON[m] + ' ' + y;
+    const first = new Date(y, m, 1);
+    const lead = (first.getDay()+6)%7; // mon=0
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+    let dow = '<div class="cal-dow">' + DOW.map(d => '<span>' + d + '</span>').join('') + '</div>';
+    let cells = '';
+    for (let i = 0; i < lead; i++) cells += '<div class="cal-cell empty"></div>';
+    for (let d = 1; d <= daysInMonth; d++) cells += cellHTML(new Date(y, m, d), false);
+    $('calWrap').innerHTML = dow + '<div class="cal-grid">' + cells + '</div>';
+  }
+
+  function renderYear() {
+    const y = cursor.getFullYear();
+    $('perLabel').textContent = String(y);
+    const start = new Date(y, 0, 1);
+    const end = new Date(y, 11, 31);
+    let cells = '';
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
+      const k = dKey(d);
+      const ss = byDate[k];
+      if (ss && ss.length) {
+        const c = colorFor(ss[0].dayName);
+        cells += '<div class="year-cell" title="' + k + ' · ' + esc(ss.map(s=>s.dayName).join(', ')) + '" style="background:' + c + '"></div>';
+      } else {
+        cells += '<div class="year-cell" title="' + k + '"></div>';
+      }
+    }
+    $('calWrap').innerHTML = '<div class="year-grid">' + cells + '</div>';
+  }
+
+  // ---------- period stats + focus ----------
+  function sessionsInPeriod() {
+    if (view === 'week') {
+      const start = startOfWeek(cursor); const end = new Date(start); end.setDate(end.getDate()+7);
+      return sessions.filter(s => { const d = new Date(s.date); return d >= start && d < end; });
+    }
+    if (view === 'month') {
+      const y = cursor.getFullYear(), m = cursor.getMonth();
+      return sessions.filter(s => { const d = new Date(s.date); return d.getFullYear()===y && d.getMonth()===m; });
+    }
+    const y = cursor.getFullYear();
+    return sessions.filter(s => new Date(s.date).getFullYear()===y);
+  }
+
+  function renderPeriodStats() {
+    $('periodStatsTitle').textContent = view === 'week' ? 'DEZE WEEK' : view === 'month' ? 'DEZE MAAND' : 'DIT JAAR';
+    const ss = sessionsInPeriod();
+    $('perSessions').textContent = ss.length;
+    const min = ss.reduce((a,s)=>a+(s.durationMin||0),0);
+    $('perHours').innerHTML = (min/60).toFixed(1) + '<span class="u">u</span>';
+    $('perSets').textContent = ss.reduce((a,s)=>a+(s.sets||0),0);
+
+    // focus breakdown by dayName
+    const byType = {};
+    ss.forEach(s => { const k = s.dayName || 'Onbekend'; byType[k] = (byType[k]||0)+1; });
+    const types = Object.keys(byType).sort((a,b)=>byType[b]-byType[a]);
+    const focus = $('focus');
+    if (!types.length) { focus.innerHTML = ''; $('focusEmpty').classList.remove('hidden'); return; }
+    $('focusEmpty').classList.add('hidden');
+    const max = Math.max.apply(null, types.map(t=>byType[t]));
+    focus.innerHTML = types.map(t => {
+      const c = colorFor(t);
+      const pct = (byType[t]/max)*100;
+      return '<div class="focus-row">'
+        + '<div class="focus-head"><span class="focus-name">' + esc(t) + '</span><span class="focus-count">' + byType[t] + 'x</span></div>'
+        + '<div class="focus-track"><div class="focus-fill" style="width:' + pct + '%;background:' + c + '"></div></div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function renderLegend() {
+    const types = Object.keys(typeColors).filter(t => sessions.some(s => (s.dayName||'Onbekend')===t));
+    $('legend').innerHTML = types.map(t =>
+      '<span class="legend-item"><span class="legend-dot" style="background:' + typeColors[t] + '"></span>' + esc(t) + '</span>'
+    ).join('');
+  }
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+  // ---------- nav ----------
+  $('viewSeg').addEventListener('click', e => {
+    const b = e.target.closest('.view-btn'); if (!b) return;
+    view = b.dataset.view; cursor = new Date(); cursor.setHours(0,0,0,0); render();
+  });
+  $('prevBtn').addEventListener('click', () => { shift(-1); });
+  $('nextBtn').addEventListener('click', () => { shift(1); });
+  function shift(dir) {
+    if (view === 'week') cursor.setDate(cursor.getDate() + dir*7);
+    else if (view === 'month') cursor.setMonth(cursor.getMonth() + dir);
+    else cursor.setFullYear(cursor.getFullYear() + dir);
+    render();
+  }
+
+  // ---------- boot ----------
+  if (!sessions.length) {
+    $('calWrap').innerHTML = '<div class="empty-note">Nog geen voltooide trainingen.<br>Sluit een training af in de Gym Tracker met "Training klaar" — dan verschijnt hij hier.</div>';
+  }
+  renderTotals();
+  render();
+})();
+</script>
+
+</body>
+</html>
