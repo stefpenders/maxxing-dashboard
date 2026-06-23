@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a0a0b">
-<title>Dagelijkse Checklist</title>
+<title>The Get Shit Done List</title>
 <script src="topbar.js" defer></script>
 <script>
 const CONFIG = {
-  appTitle: "Dagelijkse Checklist",
+  appTitle: "The Get Shit Done List",
   resetHour: 5,
   categories: [
     { id: "general", name: "Algemeen",   icon: "📋", color: "#7DD3FC" },
@@ -65,6 +65,9 @@ html,body{margin:0;padding:0;background:radial-gradient(ellipse 80% 60% at 50% 0
 .list-head{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px;}
 .task{display:flex;align-items:center;gap:12px;padding:13px 14px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;}
 .task.overdue{border-color:rgba(255,138,138,0.4);background:rgba(255,138,138,0.05);}
+.task-note{font-size:11px;color:var(--t3);margin-top:3px;line-height:1.4;}
+.add-note-inp{width:100%;background:rgba(0,0,0,0.20);border:1px solid var(--border);color:var(--t2);border-radius:7px;font-family:inherit;font-size:12px;padding:7px 10px;outline:none;margin-top:6px;resize:none;}
+.add-note-inp:focus{border-color:rgba(110,231,183,0.3);color:var(--t1);}
 .chk{width:26px;height:26px;border-radius:50%;border:2px solid var(--border2);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;color:transparent;transition:all 0.18s;flex-shrink:0;padding:0;-webkit-tap-highlight-color:transparent;}
 .chk:hover{border-color:var(--good);}
 .chk.on{background:var(--good);border-color:var(--good);color:#04201a;}
@@ -571,7 +574,7 @@ function renderAgMonth() {
     const isSel = dk === agSelectedDate;
     cells += '<div class="ag-cell' + (isToday?' today':'') + (isSel?' selected':'') + '" onclick="agSelectDay(\'' + dk + '\')">'
       + '<div class="ag-day">' + d + '</div>'
-      + items.slice(0, 2).map(p => '<span class="ag-item" onclick="event.stopPropagation();agEditItem(\'' + p.id + '\')">' + esc(p.name) + '</span>').join('')
+      + items.slice(0, 2).map(p => '<span class="ag-item" onclick="event.stopPropagation();agEditItem(\'' + p.id + '\')">' + (p.time ? p.time + ' ' : '') + esc(p.name) + '</span>').join('')
       + (items.length > 2 ? '<span style="font-size:8px;color:var(--t4)">+' + (items.length-2) + '</span>' : '')
       + '</div>';
   }
@@ -600,7 +603,7 @@ function renderAgWeek() {
     cells += '<div class="ag-week-cell' + (isToday?' today':'') + (isSel?' selected':'') + '" onclick="agSelectDay(\'' + dk + '\')">'
       + '<div class="ag-week-dow">' + AG_DOWS[i] + '</div>'
       + '<div class="ag-week-day">' + dt.getDate() + '</div>'
-      + items.map(p => '<span class="ag-week-item" onclick="event.stopPropagation();agEditItem(\'' + p.id + '\')">' + esc(p.name) + '</span>').join('')
+      + items.map(p => '<span class="ag-week-item" onclick="event.stopPropagation();agEditItem(\'' + p.id + '\')">' + (p.time ? p.time + ' ' : '') + esc(p.name) + '</span>').join('')
       + '</div>';
   }
   document.getElementById('agCalWrap').innerHTML = '<div class="ag-week-grid">' + cells + '</div>';
@@ -710,7 +713,35 @@ function agSaveAppointment() {
   });
 
   save();
-  agSelectDay(agSelectedDate);
+  // Refresh the day detail items without closing the form
+  const itemsWrap2 = document.getElementById('agDayItems');
+  if (itemsWrap2) {
+    const items2 = plannedForDate(agSelectedDate);
+    if (!items2.length) {
+      itemsWrap2.innerHTML = '<div style="font-size:12px;color:var(--t3);font-style:italic;padding:4px 0 10px">Geen afspraken op deze dag.</div>';
+    } else {
+      itemsWrap2.innerHTML = items2.map(p => {
+        const sub = [p.time, p.duration].filter(Boolean).join(' · ');
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">'
+          + '<div><div style="font-size:14px">' + esc(p.name) + '</div>'
+          + (sub ? '<div style="font-size:11px;color:var(--t3);margin-top:2px">' + esc(sub) + '</div>' : '')
+          + '</div>'
+          + '<div style="display:flex;gap:6px">'
+          + (p.type==='once'?'<button onclick="agMoveItem(\'' + p.id + '\')" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--t2);border-radius:6px;cursor:pointer">Verplaats</button>':'')
+          + '<button onclick="agDeleteItem(\'' + p.id + '\')" style="font-size:11px;padding:4px 10px;border:1px solid rgba(255,138,138,0.3);background:rgba(255,138,138,0.06);color:var(--bad);border-radius:6px;cursor:pointer">×</button>'
+          + '</div></div>';
+      }).join('');
+    }
+  }
+  // Reset only name and time, keep form open
+  document.getElementById('agName').value = '';
+  const agHourEl2 = document.getElementById('agHour');
+  const agMinEl2  = document.getElementById('agMin');
+  if (agHourEl2) agHourEl2.value = '';
+  if (agMinEl2)  agMinEl2.value  = '';
+  document.getElementById('agDurType').value = 'allday';
+  document.getElementById('agDurExtra').style.display = 'none';
+  document.getElementById('agDurExtra').innerHTML = '';
   renderAgendaModal();
   render();
 }
@@ -772,9 +803,10 @@ function doWater(id, delta) {
   save(); render();
 }
 
-function doAdd(catId, name) {
+function doAdd(catId, name, note) {
   const v = (name || '').trim(); if (!v) return;
-  ensureDate(currentDate()).tasks.push({ id: uid(), cat: catId, name: v, done: false });
+  const n = (note || '').trim();
+  ensureDate(currentDate()).tasks.push({ id: uid(), cat: catId, name: v, note: n || null, done: false });
   save(); render();
 }
 
@@ -856,19 +888,26 @@ function renderLists() {
         } else {
           inner += '<div class="task' + (t.overdue ? ' overdue' : '') + '">'
             + '<button class="chk' + (t.done ? ' on' : '') + '" onclick="doCheck(\'' + t.id + '\')">' + (t.done ? '✓' : '') + '</button>'
+            + '<div style="flex:1;min-width:0">'
             + '<span class="tname">' + esc(t.name) + (t.overdue ? '<span class="obadge">gisteren</span>' : '') + '</span>'
+            + (t.note ? '<div class="task-note">' + esc(t.note) + '</div>' : '')
+            + '</div>'
             + '<button class="tdel" onclick="doDelete(\'' + t.id + '\')">×</button>'
             + '</div>';
         }
       });
     }
     const iid = 'inp_' + cat.id;
+    const nid = 'note_' + cat.id;
     html += '<div class="list-block">'
       + '<div class="list-head" style="color:' + cat.color + '">' + esc(cat.name) + '</div>'
       + '<div>' + inner + '</div>'
       + '<div class="add-row">'
-      + '<input class="add-inp" id="' + iid + '" type="text" placeholder="Taak toevoegen…" onkeydown="if(event.key===\'Enter\'){doAdd(\'' + cat.id + '\',this.value);this.value=\'\'}">'
-      + '<button class="add-btn" onclick="doAdd(\'' + cat.id + '\',document.getElementById(\'' + iid + '\').value);document.getElementById(\'' + iid + '\').value=\'\'">+</button>'
+      + '<div style="flex:1;display:flex;flex-direction:column;gap:6px">'
+      + '<input class="add-inp" id="' + iid + '" type="text" placeholder="Taak toevoegen…" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){doAdd(\'' + cat.id + '\',this.value,document.getElementById(\'' + nid + '\').value);this.value=\'\';document.getElementById(\'' + nid + '\').value=\'\'}">'
+      + '<input class="add-inp" id="' + nid + '" type="text" placeholder="Opmerking (optioneel)…" style="font-size:12px;padding:8px 13px;color:var(--t2)">'
+      + '</div>'
+      + '<button class="add-btn" onclick="doAdd(\'' + cat.id + '\',document.getElementById(\'' + iid + '\').value,document.getElementById(\'' + nid + '\').value);document.getElementById(\'' + iid + '\').value=\'\';document.getElementById(\'' + nid + '\').value=\'\'">+</button>'
       + '</div></div>';
   });
   wrap.innerHTML = html;
@@ -984,10 +1023,13 @@ function renderRecSettings() {
   if (!state.recurring.length) { wrap.innerHTML = '<div class="empty-l">Geen terugkerende taken.</div>'; return; }
   wrap.innerHTML = state.recurring.map((r, i) => {
     const c = state.categories.find(x => x.id === r.cat) || state.categories[0];
-    return '<div class="set-row">'
+    return '<div class="set-row" style="flex-direction:column;align-items:stretch;gap:4px">'
+      + '<div style="display:flex;align-items:center;gap:8px">'
       + '<span class="rec-tag" style="background:' + c.color + '22;color:' + c.color + '">' + esc(c.name) + '</span>'
       + '<span style="flex:1;font-size:13px">' + esc(r.name) + (r.water ? ' 💧' : '') + '</span>'
       + '<button class="set-del" onclick="deleteRec(' + i + ')">×</button>'
+      + '</div>'
+      + (r.note ? '<div style="font-size:11px;color:var(--t3);padding:0 4px">' + esc(r.note) + '</div>' : '')
       + '</div>';
   }).join('');
 }
@@ -1008,20 +1050,17 @@ function deleteRec(i) {
 function addRec() {
   const name = (prompt('Naam van de terugkerende taak:') || '').trim();
   if (!name) return;
-  const catList = state.categories.map((c, i) => (i + 1) + '. ' + c.name + ' (' + c.icon + ')').join('\n');
+  const note = (prompt('Opmerking (optioneel):') || '').trim();
+  const catList = state.categories.map((c, i) => (i + 1) + '. ' + c.name).join('\n');
   const pick = prompt('In welke categorie?\n\n' + catList + '\n\nTyp het nummer:', '1');
   const idx = parseInt(pick, 10) - 1;
   if (isNaN(idx) || idx < 0 || idx >= state.categories.length) return;
-  const rec = { id: 'r_' + Date.now(), cat: state.categories[idx].id, name };
+  const rec = { id: 'r_' + Date.now(), cat: state.categories[idx].id, name, note: note || null };
   state.recurring.push(rec);
-  // Add to today and tomorrow immediately
   [activeDate(), tomorrowDate()].forEach(dateKey => {
     if (state.days[dateKey]) {
-      // Only add if not already present
       const already = state.days[dateKey].tasks.some(t => t.recurringId === rec.id);
-      if (!already) {
-        state.days[dateKey].tasks.push({ id: uid(), cat: rec.cat, name: rec.name, done: false, recurringId: rec.id });
-      }
+      if (!already) state.days[dateKey].tasks.push({ id: uid(), cat: rec.cat, name: rec.name, note: rec.note, done: false, recurringId: rec.id });
     }
   });
   save(); renderRecSettings(); render();

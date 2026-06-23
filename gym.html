@@ -517,6 +517,27 @@ html, body {
 .ex-item.active .ex-check { opacity: 1; }
 .ex-item-name { flex: 1; }
 
+/* Tabs */
+.gym-tabs { display: flex; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 4px; gap: 3px; margin-bottom: 16px; }
+.gym-tab { flex: 1; padding: 10px 8px; border: none; background: transparent; color: rgba(255,255,255,0.4); border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.gym-tab.active { background: linear-gradient(180deg, #ffffff 0%, #e8e5dd 100%); color: #0a0a0b; }
+.tab-content { display: block; }
+/* Kalender tab */
+.kal-dow { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; margin-bottom: 4px; }
+.kal-dow span { text-align: center; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: rgba(255,255,255,0.25); text-transform: uppercase; }
+.kal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+.kal-cell { aspect-ratio: 1; border-radius: 7px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; }
+.kal-cell.empty { background: transparent; border: none; }
+.kal-cell.today { border-color: rgba(125,211,252,0.4); }
+.kal-day { font-size: 11px; color: rgba(255,255,255,0.4); font-weight: 600; }
+.kal-week-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+.kal-week-cell { border-radius: 8px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 7px 5px; min-height: 72px; }
+.kal-week-cell.today { border-color: rgba(125,211,252,0.4); }
+.kal-week-dow { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255,255,255,0.25); }
+.kal-week-day { font-size: 15px; font-weight: 700; color: #fff; margin: 2px 0 4px; }
+.kal-week-tag { font-size: 9px; padding: 2px 4px; border-radius: 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kal-year-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(12px,1fr)); gap: 3px; }
+.kal-year-cell { aspect-ratio: 1; border-radius: 3px; background: rgba(255,255,255,0.04); }
 .hidden { display: none !important; }
 
 /* Collapsible "more options" in modal */
@@ -566,13 +587,21 @@ html, body {
 <div class="shell">
 
   <div class="header">
-    <h1 class="title" id="appTitle">Gym Tracker</h1>
+    <h1 class="title" id="appTitle">Gym</h1>
     <button class="icon-btn" id="settingsBtn" title="Instellingen" aria-label="Instellingen">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
   </div>
 
-  <!-- Workout progress -->
+  <!-- Tab navigation -->
+  <div class="gym-tabs" id="gymTabs">
+    <button class="gym-tab active" data-tab="trainen">Trainen</button>
+    <button class="gym-tab" data-tab="kalender">Kalender</button>
+    <button class="gym-tab" data-tab="maten">Maten</button>
+  </div>
+
+  <!-- TAB: TRAINEN -->
+  <div class="tab-content" id="tab-trainen">  <!-- Workout progress -->
   <div class="wo-progress" id="woProgress">
     <div class="wo-progress-top">
       <span class="wo-progress-label" id="woProgressLabel">Training</span>
@@ -1647,6 +1676,100 @@ html, body {
   renderAll();
 })();
 </script>
+</div><!-- /tab-trainen -->
+
+<!-- TAB: KALENDER -->
+<div class="tab-content hidden" id="tab-kalender">
+  <div id="kalTab"></div>
+</div>
+
+<!-- TAB: MATEN -->
+<div class="tab-content hidden" id="tab-maten">
+  <div id="matenTab"></div>
+</div>
+
+</div><!-- /shell -->
+
+<script>
+(function() {
+  document.querySelectorAll('.gym-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.gym-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+      document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+      if (btn.dataset.tab === 'kalender') renderKalTab();
+      if (btn.dataset.tab === 'maten')    renderMatenTab();
+    });
+  });
+})();
+
+(function() {
+  const GYM_KEY='maxx_gym_v1';
+  const PALETTE=['#6ee7b7','#7DD3FC','#fbbf24','#B794F4','#ff8a8a','#f0883e'];
+  const typeColors={};let colorIdx=0;
+  function colorFor(n){const k=n||'?';if(!typeColors[k]){typeColors[k]=PALETTE[colorIdx%PALETTE.length];colorIdx++;}return typeColors[k];}
+  function loadGym(){try{const r=localStorage.getItem(GYM_KEY);if(r)return JSON.parse(r);}catch(e){}return null;}
+  function dKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  let kalView='month',kalCursor=new Date();
+  const DOW=['ma','di','wo','do','vr','za','zo'];
+  const MON=['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+  const MONS=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  function sow(d){const x=new Date(d);x.setDate(x.getDate()-(x.getDay()+6)%7);x.setHours(0,0,0,0);return x;}
+  window.renderKalTab=function(){
+    const gym=loadGym();const sessions=(gym&&Array.isArray(gym.sessions))?gym.sessions:[];
+    if(gym&&Array.isArray(gym.days))gym.days.forEach(d=>colorFor(d.name));
+    const byDate={};sessions.forEach(s=>{const k=dKey(new Date(s.date));(byDate[k]=byDate[k]||[]).push(s);});
+    const totalMin=sessions.reduce((a,s)=>a+(s.durationMin||0),0);
+    function wkStreak(){const wof=d=>{const x=new Date(d);x.setDate(x.getDate()-(x.getDay()+6)%7);x.setHours(0,0,0,0);return x.getTime();};const wks=new Set(sessions.map(s=>wof(new Date(s.date))));let str=0,cur=wof(new Date());if(!wks.has(cur))cur-=7*86400000;while(wks.has(cur)){str++;cur-=7*86400000;}return str;}
+    function getSP(){const y=kalCursor.getFullYear(),m=kalCursor.getMonth();if(kalView==='week'){const s=sow(kalCursor);const e=new Date(s);e.setDate(e.getDate()+7);return sessions.filter(s=>{const d=new Date(s.date);return d>=s&&d<e;});}if(kalView==='month')return sessions.filter(s=>{const d=new Date(s.date);return d.getFullYear()===y&&d.getMonth()===m;});return sessions.filter(s=>new Date(s.date).getFullYear()===y);}
+    function perLbl(){if(kalView==='week'){const s=sow(kalCursor);const e=new Date(s);e.setDate(e.getDate()+6);return s.getDate()+' '+MONS[s.getMonth()]+' – '+e.getDate()+' '+MONS[e.getMonth()];}if(kalView==='month')return MON[kalCursor.getMonth()]+' '+kalCursor.getFullYear();return String(kalCursor.getFullYear());}
+    function calHTML(){const today=dKey(new Date());
+      if(kalView==='week'){const start=sow(kalCursor);let c='';for(let i=0;i<7;i++){const d=new Date(start);d.setDate(d.getDate()+i);const k=dKey(d);const ss=byDate[k];const cl=ss?colorFor(ss[0].dayName):null;c+='<div class="kal-week-cell'+(k===today?' today':'')+'"'+(cl?' style="border-color:'+cl+'40;background:'+cl+'10"':'')+'>'+  '<div class="kal-week-dow">'+DOW[i]+'</div><div class="kal-week-day">'+d.getDate()+'</div>'+(ss?ss.map(s=>'<div class="kal-week-tag" style="background:'+colorFor(s.dayName)+'22;color:'+colorFor(s.dayName)+'">'+esc(s.dayName||'?')+'</div>').join(''):'')+'</div>';}return '<div class="kal-dow">'+DOW.map(d=>'<span>'+d+'</span>').join('')+'</div><div class="kal-week-grid">'+c+'</div>';}
+      if(kalView==='month'){const y=kalCursor.getFullYear(),m=kalCursor.getMonth();const first=new Date(y,m,1),lead=(first.getDay()+6)%7,dim=new Date(y,m+1,0).getDate();let c='';for(let i=0;i<lead;i++)c+='<div class="kal-cell empty"></div>';for(let d=1;d<=dim;d++){const k=dKey(new Date(y,m,d));const ss=byDate[k];const cl=ss?colorFor(ss[0].dayName):null;c+='<div class="kal-cell'+(k===today?' today':'')+'"'+(cl?' style="background:'+cl+';border-color:'+cl+'"':'')+'>'+  '<span class="kal-day" style="'+(cl?'color:#0a0a0b;font-weight:700':'')+'">'+d+'</span></div>';}return '<div class="kal-dow">'+DOW.map(d=>'<span>'+d+'</span>').join('')+'</div><div class="kal-grid">'+c+'</div>';}
+      let c='';for(let d=new Date(kalCursor.getFullYear(),0,1);d.getFullYear()===kalCursor.getFullYear();d.setDate(d.getDate()+1)){const k=dKey(d);const ss=byDate[k];c+='<div class="kal-year-cell" title="'+k+(ss?' · '+ss[0].dayName:'')+'" style="'+(ss?'background:'+colorFor(ss[0].dayName):'')+'"></div>';}return '<div class="kal-year-grid">'+c+'</div>';}
+    const sp=getSP();const byType={};sp.forEach(s=>{const k=s.dayName||'?';byType[k]=(byType[k]||0)+1;});
+    const types=Object.keys(byType).sort((a,b)=>byType[b]-byType[a]);const maxT=types.length?Math.max(...types.map(t=>byType[t])):1;
+    const perMin=sp.reduce((a,s)=>a+(s.durationMin||0),0);
+    const legT=Object.keys(typeColors).filter(t=>sessions.some(s=>(s.dayName||'?')===t));
+    document.getElementById('kalTab').innerHTML=
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'+[['Sessies',sessions.length],['Uren',(totalMin/60).toFixed(1)+'u'],['Reeks',wkStreak()+'wk']].map(([l,v])=>'<div style="padding:14px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;text-align:center"><div style="font-size:22px;font-weight:700">'+v+'</div><div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-top:4px">'+l+'</div></div>').join('')+'</div>'+
+      '<div style="display:flex;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:4px;gap:3px;margin-bottom:12px">'+[['week','Week'],['month','Maand'],['year','Jaar']].map(([v,l])=>'<button class="seg-btn'+(kalView===v?' active':'')+'" data-kalview="'+v+'" style="flex:1;padding:10px;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">'+l+'</button>').join('')+'</div>'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><button onclick="kalShift(-1)" style="width:34px;height:34px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);border-radius:8px;cursor:pointer;font-size:18px">&#8249;</button><span style="font-size:14px;font-weight:700">'+perLbl()+'</span><button onclick="kalShift(1)" style="width:34px;height:34px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);border-radius:8px;cursor:pointer;font-size:18px">&#8250;</button></div>'+
+      '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:14px">'+calHTML()+'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">'+legT.map(t=>'<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.6)"><span style="width:10px;height:10px;border-radius:3px;background:'+typeColors[t]+';display:inline-block"></span>'+esc(t)+'</span>').join('')+'</div></div>'+
+      '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:16px"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:12px">'+perLbl().toUpperCase()+' — STATS</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">'+[['Sessies',sp.length],['Tijd',(perMin/60).toFixed(1)+'u'],['Sets',sp.reduce((a,s)=>a+(s.sets||0),0)]].map(([l,v])=>'<div style="padding:12px 8px;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:10px;text-align:center"><div style="font-size:20px;font-weight:700">'+v+'</div><div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-top:3px">'+l+'</div></div>').join('')+'</div>'+
+      (types.length?'<div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px">FOCUS</div>'+types.map(t=>'<div style="margin-bottom:10px"><div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px"><span style="font-size:13px;font-weight:600">'+esc(t)+'</span><span style="font-size:12px;color:var(--text-3)">'+byType[t]+'x</span></div><div style="height:8px;border-radius:999px;background:rgba(255,255,255,0.06);overflow:hidden"><div style="height:100%;width:'+(byType[t]/maxT*100)+'%;background:'+colorFor(t)+';border-radius:999px"></div></div></div>').join(''):
+      '<div style="text-align:center;font-size:13px;color:var(--text-3);font-style:italic;padding:16px 0">Nog geen trainingen.</div>')+'</div>';
+  };
+  window.setKalView=function(v){kalView=v;renderKalTab();};
+  // Wire seg buttons (can't use onclick in template strings with variables)
+  document.addEventListener('click', function(e) {
+    const b = e.target.closest('[data-kalview]');
+    if (b) { kalView = b.dataset.kalview; renderKalTab(); }
+  });
+  window.kalShift=function(d){if(kalView==='week')kalCursor.setDate(kalCursor.getDate()+d*7);else if(kalView==='month')kalCursor.setMonth(kalCursor.getMonth()+d);else kalCursor.setFullYear(kalCursor.getFullYear()+d);renderKalTab();};
+})();
+
+(function(){
+  const MS_KEY='maxx_measure_v1';
+  function loadM(){try{const r=localStorage.getItem(MS_KEY);if(r)return JSON.parse(r);}catch(e){}return {entries:[]};}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  const M=[{id:'weight',n:'Gewicht',u:'kg'},{id:'chest',n:'Borst',u:'cm'},{id:'shoulders',n:'Schouders',u:'cm'},{id:'waist',n:'Buik',u:'cm'},{id:'bicepL',n:'Bicep L',u:'cm'},{id:'bicepR',n:'Bicep R',u:'cm'},{id:'forearmL',n:'Onderarm L',u:'cm'},{id:'forearmR',n:'Onderarm R',u:'cm'},{id:'thighL',n:'Bovenbeen L',u:'cm'},{id:'thighR',n:'Bovenbeen R',u:'cm'},{id:'calfL',n:'Kuit L',u:'cm'},{id:'calfR',n:'Kuit R',u:'cm'}];
+  const MO=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  function fd(iso){const d=new Date(iso);return d.getDate()+' '+MO[d.getMonth()]+' '+d.getFullYear();}
+  window.renderMatenTab=function(){
+    const data=loadM();const entries=Array.isArray(data.entries)?data.entries:[];const lat=entries[entries.length-1]||{};const prv=entries[entries.length-2]||{};
+    let h='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:14px"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px">METING TOEVOEGEN</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+M.map(m=>'<div><div style="font-size:11px;color:var(--text-3);margin-bottom:4px">'+esc(m.n)+' ('+m.u+')</div><input id="m_'+m.id+'" type="number" step="0.1" placeholder="—" style="width:100%;background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.06);color:#fff;border-radius:8px;font-family:inherit;font-size:14px;padding:9px 11px;outline:none;box-sizing:border-box"></div>').join('')+'</div><button onclick="saveMeting()" style="width:100%;margin-top:14px;padding:13px;border:none;background:linear-gradient(180deg,#fff 0%,#e8e5dd 100%);color:#0a0a0b;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">Meting opslaan</button></div>';
+    if(entries.length){h+='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:14px"><div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-3)">LAATSTE METING</div><div style="font-size:12px;color:var(--text-3)">'+fd(lat.date)+'</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+M.map(m=>{const v=lat[m.id],pv=prv[m.id];const df=v&&pv?(v-pv).toFixed(1):null;const c=df===null?'rgba(255,255,255,0.6)':parseFloat(df)<0?'#6ee7b7':parseFloat(df)>0?'#ff8a8a':'rgba(255,255,255,0.6)';return '<div style="padding:10px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);border-radius:10px"><div style="font-size:10px;color:var(--text-3);margin-bottom:4px">'+esc(m.n)+'</div><div style="font-size:18px;font-weight:700">'+(v||'—')+(v?' <span style="font-size:11px;color:var(--text-3)">'+m.u+'</span>':'')+'</div>'+(df!==null?'<div style="font-size:11px;font-weight:600;color:'+c+';margin-top:2px">'+(parseFloat(df)>0?'+':'')+df+' '+m.u+'</div>':'')+'</div>';}).join('')+'</div></div>';}
+    if(entries.length>1){h+='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:18px"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:12px">GESCHIEDENIS</div>'+entries.slice().reverse().map(e=>'<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06)"><div style="font-size:12px;color:var(--text-3);margin-bottom:6px">'+fd(e.date)+'</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+M.filter(m=>e[m.id]).map(m=>'<span style="font-size:11px;padding:2px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:6px;color:rgba(255,255,255,0.6)">'+esc(m.n)+' <strong>'+e[m.id]+m.u+'</strong></span>').join('')+'</div></div>').join('')+'</div>';}
+    document.getElementById('matenTab').innerHTML=h;
+  };
+  window.saveMeting=function(){const data=loadM();if(!Array.isArray(data.entries))data.entries=[];const entry={date:new Date().toISOString()};let any=false;M.forEach(m=>{const el=document.getElementById('m_'+m.id);if(el&&el.value){entry[m.id]=parseFloat(el.value);any=true;el.value='';}});if(!any){alert('Vul minstens één meting in.');return;}data.entries.push(entry);localStorage.setItem(MS_KEY,JSON.stringify(data));renderMatenTab();};
+})();
+</script>
 
 </body>
 </html>
+

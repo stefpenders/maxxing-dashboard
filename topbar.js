@@ -4,10 +4,8 @@
 // ============================================================
 (function () {
   const NAV_ITEMS = [
-    { id: 'checklist',   label: 'Checklist',  href: 'checklist.html' },
-    { id: 'gym',         label: 'Gym',        href: 'gym.html' },
-    { id: 'kalender',    label: 'Kalender',   href: 'kalender.html' },
-    { id: 'maten',       label: 'Maten',      href: 'measurements.html' },
+    { id: 'checklist', label: 'Checklist', href: 'checklist.html' },
+    { id: 'gym',       label: 'Gym',       href: 'gym.html' },
   ];
 
   // Determine which page is active based on current filename
