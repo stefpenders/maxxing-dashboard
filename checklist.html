@@ -124,6 +124,37 @@ html,body{margin:0;padding:0;background:radial-gradient(ellipse 80% 60% at 50% 0
 .divider{display:flex;align-items:center;gap:16px;margin:22px 0 14px;}
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.10);}
 .divider span{font-size:11px;letter-spacing:0.22em;font-weight:600;color:rgba(255,255,255,0.85);}
+/* Agenda modal */
+.agenda-modal{width:100%;max-width:540px;background:var(--bg-card);border:1px solid var(--border2);border-radius:16px;padding:22px;max-height:92vh;overflow-y:auto;}
+.agenda-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.agenda-head h3{margin:0;font-size:17px;font-weight:700;}
+.ag-nav{display:flex;align-items:center;gap:8px;}
+.ag-nav button{width:34px;height:34px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--t2);border-radius:8px;cursor:pointer;font-size:16px;-webkit-tap-highlight-color:transparent;}
+.ag-nav button:hover{background:rgba(255,255,255,0.08);color:var(--t1);}
+.ag-period{font-size:14px;font-weight:700;min-width:130px;text-align:center;}
+.ag-seg{display:flex;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px;margin-bottom:14px;}
+.ag-seg button{flex:1;padding:8px;border:none;background:transparent;color:var(--t3);border-radius:7px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.ag-seg button.active{background:linear-gradient(180deg,#fff 0%,#e8e5dd 100%);color:#0a0a0b;}
+.ag-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px;}
+.ag-dow span{text-align:center;font-size:9px;font-weight:700;letter-spacing:0.06em;color:var(--t4);text-transform:uppercase;}
+.ag-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.ag-cell{min-height:48px;border-radius:7px;background:rgba(255,255,255,0.02);border:1px solid var(--border);padding:3px 3px 4px;cursor:pointer;transition:background 0.12s;overflow:hidden;}
+.ag-cell:hover{background:rgba(255,255,255,0.06);}
+.ag-cell.empty{background:transparent;border:none;cursor:default;}
+.ag-cell.today{border-color:rgba(125,211,252,0.5);}
+.ag-day{font-size:10px;color:var(--t3);font-weight:600;text-align:center;}
+.ag-cell.today .ag-day{color:var(--info);font-weight:800;}
+.ag-item{display:block;font-size:8px;padding:1px 3px;border-radius:3px;background:rgba(110,231,183,0.15);color:var(--good);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+.ag-item:hover{background:rgba(110,231,183,0.28);}
+.ag-week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.ag-week-cell{border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid var(--border);padding:8px 6px;cursor:pointer;min-height:80px;}
+.ag-week-cell:hover{background:rgba(255,255,255,0.06);}
+.ag-week-cell.today{border-color:rgba(125,211,252,0.4);}
+.ag-week-dow{font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--t4);}
+.ag-week-day{font-size:16px;font-weight:700;color:var(--t1);margin:2px 0 5px;}
+.ag-week-cell.today .ag-week-day{color:var(--info);}
+.ag-week-item{display:block;font-size:10px;padding:2px 5px;border-radius:4px;background:rgba(110,231,183,0.14);color:var(--good);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+.ag-week-item:hover{background:rgba(110,231,183,0.26);}
 </style>
 </head>
 <body>
@@ -138,6 +169,7 @@ html,body{margin:0;padding:0;background:radial-gradient(ellipse 80% 60% at 50% 0
   <div class="pill-row">
     <div class="day-pill" id="dayPill">—</div>
     <button class="tmr-btn" id="tmrBtn" onclick="toggleTomorrow()">Morgen →</button>
+    <button class="tmr-btn" onclick="openAgenda()">📅 Agenda</button>
   </div>
 
   <div class="header">
@@ -182,6 +214,10 @@ html,body{margin:0;padding:0;background:radial-gradient(ellipse 80% 60% at 50% 0
   <div class="modal">
     <h3>Instellingen</h3>
     <p class="modal-note">Nieuwe dag begint om 5:00. Terugkerende taken verschijnen elke dag automatisch.</p>
+    <h4>Planning & Afspraken</h4>
+    <div id="plannedListSettings"></div>
+    <button class="add-more" onclick="openAgenda()">📅 Afspraak inplannen via agenda</button>
+
     <h4>Categorieën</h4>
     <div id="catList"></div>
     <button class="add-more" onclick="addCat()">+ Categorie toevoegen</button>
@@ -211,6 +247,7 @@ function defaultState() {
   return {
     categories: CONFIG.categories.map(c => Object.assign({}, c)),
     recurring:  CONFIG.recurring.map(r => Object.assign({}, r)),
+    planned: [], // [{id, name, type:'once'|'interval', date, interval, lastAdded, cat}]
     days: {},
     history: {}
   };
@@ -224,6 +261,7 @@ function loadState() {
     // migrations
     if (!s.categories) s.categories = CONFIG.categories.map(c => Object.assign({}, c));
     if (!s.recurring)  s.recurring  = CONFIG.recurring.map(r => Object.assign({}, r));
+    if (!s.planned)    s.planned    = [];
     if (!s.days)       s.days = {};
     if (!s.history)    s.history = {};
     s.recurring.forEach(r => { if (r.list && !r.cat) { r.cat = r.list; delete r.list; } });
@@ -293,13 +331,232 @@ function ensureDate(dateKey) {
         }
       }
     }
+    // inject planned items that belong to this date
+    injectPlanned(dateKey, tasks);
     state.days[dateKey] = { tasks };
     save();
   }
   return state.days[dateKey];
 }
 
-function currentTasks() { return ensureDate(currentDate()).tasks; }
+function injectPlanned(dateKey, tasks) {
+  try {
+    if (!state.planned || !state.planned.length) return;
+    const genCat = (state.categories[0] || {}).id || 'general';
+    state.planned.forEach(p => {
+      if (!p || !p.id || !p.date) return;
+      const already = tasks.some(t => t.plannedId === p.id);
+      if (already) return;
+      let belongs = false;
+      if (p.type === 'once') {
+        belongs = p.date === dateKey;
+      } else if (p.type === 'interval' && p.interval > 0) {
+        const start = new Date(p.date + 'T12:00:00');
+        const cur   = new Date(dateKey + 'T12:00:00');
+        if (cur >= start) {
+          const diffDays = Math.round((cur - start) / 86400000);
+          belongs = diffDays % p.interval === 0;
+        }
+      }
+      if (belongs) {
+        tasks.push({ id: uid(), cat: p.cat || genCat, name: p.name, done: false, plannedId: p.id });
+      }
+    });
+  } catch(e) { console.error('injectPlanned error:', e); }
+}
+
+// Also check planned items for already-existing days (e.g. when a new planned item is added)
+function reinjectPlannedForDate(dateKey) {
+  if (!state.days[dateKey]) return;
+  const tasks = state.days[dateKey].tasks;
+  injectPlanned(dateKey, tasks);
+}
+
+// ============================================================
+// AGENDA MODAL
+// ============================================================
+let agView = 'month';
+let agCursor = new Date();
+let agSelectedDate = null;
+
+const AG_MONS = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+const AG_MONS_SHORT = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+const AG_DOWS = ['ma','di','wo','do','vr','za','zo'];
+
+function openAgenda() {
+  agCursor = new Date(); agCursor.setHours(0,0,0,0);
+  agSelectedDate = null;
+  document.getElementById('agendaModal').classList.add('show');
+  document.getElementById('agDayDetail').style.display = 'none';
+  renderAgendaModal();
+}
+function closeAgenda() {
+  document.getElementById('agendaModal').classList.remove('show');
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const m = document.getElementById('agendaModal');
+  if (m) m.addEventListener('click', e => { if (e.target === m) closeAgenda(); });
+});
+
+function setAgView(v) {
+  agView = v;
+  document.querySelectorAll('.ag-seg button').forEach((b,i) => b.classList.toggle('active', ['week','month'][i] === v));
+  renderAgendaModal();
+}
+
+function agShift(dir) {
+  if (agView === 'week') agCursor.setDate(agCursor.getDate() + dir * 7);
+  else agCursor.setMonth(agCursor.getMonth() + dir);
+  renderAgendaModal();
+}
+
+// Get all planned items for a specific date
+function plannedForDate(dk) {
+  if (!state || !state.planned) return [];
+  return state.planned.filter(p => {
+    if (p.type === 'once') return p.date === dk;
+    if (p.type === 'interval' && p.interval > 0) {
+      const start = new Date(p.date + 'T12:00:00');
+      const cur   = new Date(dk + 'T12:00:00');
+      if (cur < start) return false;
+      const diff = Math.round((cur - start) / 86400000);
+      return diff % p.interval === 0;
+    }
+    return false;
+  });
+}
+
+function renderAgendaModal() {
+  if (agView === 'month') renderAgMonth();
+  else renderAgWeek();
+}
+
+function renderAgMonth() {
+  const y = agCursor.getFullYear(), m = agCursor.getMonth();
+  document.getElementById('agPeriod').textContent = AG_MONS[m] + ' ' + y;
+  const today = dateStr(new Date());
+  const first = new Date(y, m, 1);
+  const lead = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+
+  let dowHtml = AG_DOWS.map(d => '<span>' + d + '</span>').join('');
+  let cells = '';
+  for (let i = 0; i < lead; i++) cells += '<div class="ag-cell empty"></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dt = new Date(y, m, d);
+    const dk = dateStr(dt);
+    const items = plannedForDate(dk);
+    const isToday = dk === today;
+    const isSel = dk === agSelectedDate;
+    cells += '<div class="ag-cell' + (isToday?' today':'') + (isSel?' selected':'') + '" onclick="agSelectDay(\'' + dk + '\')">'
+      + '<div class="ag-day">' + d + '</div>'
+      + items.slice(0, 2).map(p => '<span class="ag-item" onclick="event.stopPropagation();agEditItem(\'' + p.id + '\')">' + esc(p.name) + '</span>').join('')
+      + (items.length > 2 ? '<span style="font-size:8px;color:var(--t4)">+' + (items.length-2) + '</span>' : '')
+      + '</div>';
+  }
+  document.getElementById('agCalWrap').innerHTML =
+    '<div class="ag-dow">' + dowHtml + '</div><div class="ag-grid">' + cells + '</div>';
+}
+
+function renderAgWeek() {
+  // Start of week (monday)
+  const d = new Date(agCursor);
+  const day = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - day);
+  const startOfWeek = new Date(d);
+  const endOfWeek = new Date(d); endOfWeek.setDate(endOfWeek.getDate() + 6);
+  document.getElementById('agPeriod').textContent =
+    startOfWeek.getDate() + ' ' + AG_MONS_SHORT[startOfWeek.getMonth()] + ' – ' +
+    endOfWeek.getDate() + ' ' + AG_MONS_SHORT[endOfWeek.getMonth()];
+  const today = dateStr(new Date());
+  let cells = '';
+  for (let i = 0; i < 7; i++) {
+    const dt = new Date(startOfWeek); dt.setDate(dt.getDate() + i);
+    const dk = dateStr(dt);
+    const items = plannedForDate(dk);
+    const isToday = dk === today;
+    const isSel = dk === agSelectedDate;
+    cells += '<div class="ag-week-cell' + (isToday?' today':'') + (isSel?' selected':'') + '" onclick="agSelectDay(\'' + dk + '\')">'
+      + '<div class="ag-week-dow">' + AG_DOWS[i] + '</div>'
+      + '<div class="ag-week-day">' + dt.getDate() + '</div>'
+      + items.map(p => '<span class="ag-week-item" onclick="event.stopPropagation();agEditItem(\'' + p.id + '\')">' + esc(p.name) + '</span>').join('')
+      + '</div>';
+  }
+  document.getElementById('agCalWrap').innerHTML = '<div class="ag-week-grid">' + cells + '</div>';
+}
+
+function agSelectDay(dk) {
+  agSelectedDate = dk;
+  renderAgendaModal();
+  const detail = document.getElementById('agDayDetail');
+  const title = document.getElementById('agDayTitle');
+  const itemsWrap = document.getElementById('agDayItems');
+  const [y,m,d] = dk.split('-').map(Number);
+  title.textContent = d + ' ' + AG_MONS[m-1] + ' ' + y;
+  const items = plannedForDate(dk);
+  if (!items.length) {
+    itemsWrap.innerHTML = '<div style="font-size:12px;color:var(--t3);font-style:italic;padding:4px 0">Geen afspraken op deze dag.</div>';
+  } else {
+    itemsWrap.innerHTML = items.map(p =>
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">'
+      + '<span style="font-size:14px">' + esc(p.name) + (p.type==='interval'?' <span style="font-size:10px;color:var(--t4)">(elke '+p.interval+'d)</span>':'') + '</span>'
+      + '<div style="display:flex;gap:6px">'
+      + (p.type==='once'?'<button onclick="agMoveItem(\'' + p.id + '\')" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--t2);border-radius:6px;cursor:pointer">Verplaats</button>':'')
+      + '<button onclick="agDeleteItem(\'' + p.id + '\')" style="font-size:11px;padding:4px 10px;border:1px solid rgba(255,138,138,0.3);background:rgba(255,138,138,0.06);color:var(--bad);border-radius:6px;cursor:pointer">Verwijder</button>'
+      + '</div></div>'
+    ).join('');
+  }
+  detail.style.display = 'block';
+}
+
+function addPlannedOnDate(dk) {
+  const name = (prompt('Naam van de afspraak:') || '').trim();
+  if (!name) return;
+  const dateSuggestion = dk || dateStr(new Date());
+  const dateInput = prompt('Datum (JJJJ-MM-DD):', dateSuggestion);
+  if (!dateInput || !/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) { alert('Ongeldige datum. Gebruik: 2026-06-28'); return; }
+  const genCat = (state.categories[0] || {}).id || 'general';
+  state.planned.push({ id: 'p_' + Date.now(), name, type: 'once', date: dateInput, cat: genCat });
+  [activeDate(), tomorrowDate()].forEach(d => { if (state.days[d]) reinjectPlannedForDate(d); });
+  save(); renderAgendaModal();
+  if (agSelectedDate) agSelectDay(agSelectedDate);
+  render();
+}
+
+function agEditItem(id) {
+  const p = state.planned.find(x => x.id === id);
+  if (!p) return;
+  if (p.type === 'interval') { alert('Herhalende taken kun je aanpassen via Instellingen.'); return; }
+  agMoveItem(id);
+}
+
+function agMoveItem(id) {
+  const p = state.planned.find(x => x.id === id);
+  if (!p) return;
+  const newDate = prompt('Verplaats "' + p.name + '" naar datum (JJJJ-MM-DD):', p.date);
+  if (!newDate || !/^\d{4}-\d{2}-\d{2}$/.test(newDate)) return;
+  // remove from old date in days
+  Object.values(state.days).forEach(d => { if (d && d.tasks) d.tasks = d.tasks.filter(t => t.plannedId !== id); });
+  p.date = newDate;
+  [activeDate(), tomorrowDate()].forEach(d => { if (state.days[d]) reinjectPlannedForDate(d); });
+  save(); renderAgendaModal();
+  if (agSelectedDate) agSelectDay(agSelectedDate);
+  render();
+}
+
+function agDeleteItem(id) {
+  const p = state.planned.find(x => x.id === id);
+  if (!p || !confirm('"' + p.name + '" verwijderen?')) return;
+  state.planned = state.planned.filter(x => x.id !== id);
+  Object.values(state.days).forEach(d => { if (d && d.tasks) d.tasks = d.tasks.filter(t => t.plannedId !== id); });
+  save(); renderAgendaModal();
+  if (agSelectedDate) agSelectDay(agSelectedDate);
+  render();
+}
+
+function currentTasks() {
+  try { return ensureDate(currentDate()).tasks; } catch(e) { return []; }
+}
 
 function doCheck(id) {
   const t = currentTasks().find(t => t.id === id); if (!t) return;
@@ -339,7 +596,7 @@ function toggleTomorrow() {
 // RENDER
 // ============================================================
 function render() {
-  if (!state) return; // not yet loaded
+  if (!state) return;
   renderPill();
   renderProgress();
   renderLists();
@@ -425,7 +682,23 @@ function renderLists() {
 function openSettings() {
   renderCatSettings();
   renderRecSettings();
+  renderPlannedSettingsPreview();
   document.getElementById('setModal').classList.add('show');
+}
+
+function renderPlannedSettingsPreview() {
+  const wrap = document.getElementById('plannedListSettings');
+  if (!wrap) return;
+  if (!state.planned || !state.planned.length) {
+    wrap.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.3);font-style:italic;padding:4px 0 8px">Nog geen geplande items.</div>';
+    return;
+  }
+  const mons = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  wrap.innerHTML = state.planned.slice(0, 3).map(p => {
+    const [y,m,d] = p.date.split('-').map(Number);
+    return '<div style="font-size:13px;color:var(--t2);padding:4px 0">'
+      + esc(p.name) + ' <span style="color:var(--t4)">· ' + d + ' ' + mons[m-1] + (p.type === 'interval' ? ' · elke ' + p.interval + 'd' : '') + '</span></div>';
+  }).join('') + (state.planned.length > 3 ? '<div style="font-size:11px;color:var(--t4);padding:4px 0">+' + (state.planned.length - 3) + ' meer</div>' : '');
 }
 
 function closeSettings() {
@@ -758,5 +1031,35 @@ document.getElementById('appTitle').textContent = CONFIG.appTitle;
   setInterval(() => { ensureDate(activeDate()); render(); renderChart(); }, 60000);
 })();
 </script>
+<!-- Agenda modal -->
+<div class="modal-bg" id="agendaModal">
+  <div class="agenda-modal">
+    <div class="agenda-head">
+      <h3>Agenda</h3>
+      <button class="btn-sec" style="padding:8px 16px;font-size:13px" onclick="closeAgenda()">Sluiten</button>
+    </div>
+    <div class="ag-seg">
+      <button class="active" onclick="setAgView('week')">Week</button>
+      <button onclick="setAgView('month')">Maand</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="ag-nav">
+        <button onclick="agShift(-1)">‹</button>
+        <span class="ag-period" id="agPeriod">—</span>
+        <button onclick="agShift(1)">›</button>
+      </div>
+    </div>
+    <div id="agCalWrap"></div>
+    <button class="add-more" style="margin-top:14px" onclick="addPlannedOnDate(null)">+ Afspraak of taak inplannen</button>
+
+    <!-- Selected day detail -->
+    <div id="agDayDetail" style="display:none;margin-top:14px;padding:14px;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:12px">
+      <div style="font-size:12px;font-weight:700;letter-spacing:0.10em;text-transform:uppercase;color:var(--t3);margin-bottom:10px" id="agDayTitle">—</div>
+      <div id="agDayItems"></div>
+      <button class="add-more" style="margin-top:8px" onclick="addPlannedOnDate(agSelectedDate)">+ Toevoegen op deze dag</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
