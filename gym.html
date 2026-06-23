@@ -518,26 +518,28 @@ html, body {
 .ex-item-name { flex: 1; }
 
 /* Tabs */
-.gym-tabs { display: flex; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 4px; gap: 3px; margin-bottom: 16px; }
-.gym-tab { flex: 1; padding: 10px 8px; border: none; background: transparent; color: rgba(255,255,255,0.4); border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.gym-tab.active { background: linear-gradient(180deg, #ffffff 0%, #e8e5dd 100%); color: #0a0a0b; }
+.gym-tabs { display: flex; gap: 6px; margin-bottom: 18px; }
+.gym-tab { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.10); background: transparent; color: rgba(255,255,255,0.35); border-radius: 8px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; letter-spacing: 0.04em; transition: color 0.15s, border-color 0.15s; }
+.gym-tab:hover { color: rgba(255,255,255,0.65); border-color: rgba(255,255,255,0.22); }
+.gym-tab.active { color: #ffffff; border-color: rgba(255,255,255,0.70); background: transparent; }
 .tab-content { display: block; }
-/* Kalender tab */
-.kal-dow { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; margin-bottom: 4px; }
-.kal-dow span { text-align: center; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: rgba(255,255,255,0.25); text-transform: uppercase; }
-.kal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
-.kal-cell { aspect-ratio: 1; border-radius: 7px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; }
+/* Kalender tab — zelfde breedte als de rest */
+#tab-kalender, #tab-maten { max-width: 720px; }
+.kal-dow { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; margin-bottom: 3px; }
+.kal-dow span { text-align: center; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: rgba(255,255,255,0.22); text-transform: uppercase; }
+.kal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
+.kal-cell { aspect-ratio: 1; border-radius: 6px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; }
 .kal-cell.empty { background: transparent; border: none; }
 .kal-cell.today { border-color: rgba(125,211,252,0.4); }
-.kal-day { font-size: 11px; color: rgba(255,255,255,0.4); font-weight: 600; }
+.kal-day { font-size: 10px; color: rgba(255,255,255,0.35); font-weight: 600; }
 .kal-week-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
-.kal-week-cell { border-radius: 8px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 7px 5px; min-height: 72px; }
+.kal-week-cell { border-radius: 8px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 6px 4px; min-height: 60px; }
 .kal-week-cell.today { border-color: rgba(125,211,252,0.4); }
-.kal-week-dow { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255,255,255,0.25); }
-.kal-week-day { font-size: 15px; font-weight: 700; color: #fff; margin: 2px 0 4px; }
-.kal-week-tag { font-size: 9px; padding: 2px 4px; border-radius: 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.kal-year-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(12px,1fr)); gap: 3px; }
-.kal-year-cell { aspect-ratio: 1; border-radius: 3px; background: rgba(255,255,255,0.04); }
+.kal-week-dow { font-size: 8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255,255,255,0.22); }
+.kal-week-day { font-size: 13px; font-weight: 700; color: #fff; margin: 2px 0 3px; }
+.kal-week-tag { font-size: 8px; padding: 1px 3px; border-radius: 3px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kal-year-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(10px,1fr)); gap: 2px; }
+.kal-year-cell { aspect-ratio: 1; border-radius: 2px; background: rgba(255,255,255,0.04); }
 .hidden { display: none !important; }
 
 /* Collapsible "more options" in modal */
@@ -1680,12 +1682,16 @@ html, body {
 
 <!-- TAB: KALENDER -->
 <div class="tab-content hidden" id="tab-kalender">
-  <div id="kalTab"></div>
+  <div style="max-width:720px;margin:0 auto;padding:0 16px 80px">
+    <div id="kalTab"></div>
+  </div>
 </div>
 
 <!-- TAB: MATEN -->
 <div class="tab-content hidden" id="tab-maten">
-  <div id="matenTab"></div>
+  <div style="max-width:720px;margin:0 auto;padding:0 16px 80px">
+    <div id="matenTab"></div>
+  </div>
 </div>
 
 </div><!-- /shell -->
