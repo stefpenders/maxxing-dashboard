@@ -127,7 +127,13 @@ html,body{margin:0;padding:0;background:radial-gradient(ellipse 80% 60% at 50% 0
 </style>
 </head>
 <body>
-<div class="shell">
+<div id="loadingScreen" style="position:fixed;inset:0;background:#0a0a0b;display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:12px">
+  <div style="width:32px;height:32px;border:3px solid rgba(255,255,255,0.1);border-top-color:#6ee7b7;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+  <span style="font-size:12px;color:rgba(255,255,255,0.4)">Laden…</span>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<div class="shell" id="mainShell" style="visibility:hidden">
 
   <div class="pill-row">
     <div class="day-pill" id="dayPill">—</div>
@@ -229,11 +235,12 @@ function loadState() {
 }
 
 function save() {
+  state._savedAt = Date.now();
   localStorage.setItem(LS, JSON.stringify(state));
   sbPush();
 }
 
-let state = loadState();
+let state = null; // loaded after Supabase pull in boot()
 
 // ============================================================
 // DATE
@@ -332,6 +339,7 @@ function toggleTomorrow() {
 // RENDER
 // ============================================================
 function render() {
+  if (!state) return; // not yet loaded
   renderPill();
   renderProgress();
   renderLists();
@@ -434,7 +442,7 @@ function renderCatSettings() {
     '<div class="set-row">'
     + '<button class="set-icon" onclick="cycleCatIcon(' + i + ')">' + c.icon + '</button>'
     + '<span class="set-swatch" style="background:' + c.color + '" onclick="cycleCatColor(' + i + ')"></span>'
-    + '<input value="' + esc(c.name) + '" oninput="state.categories[' + i + '].name=this.value;save();renderLists()">'
+    + '<input value="' + esc(c.name) + '" oninput="state.categories[' + i + '].name=this.value;save();render()">'
     + '<button class="set-del" onclick="deleteCat(' + i + ')">×</button>'
     + '</div>'
   ).join('');
@@ -443,13 +451,13 @@ function renderCatSettings() {
 function cycleCatIcon(i) {
   const cur = ICONS.indexOf(state.categories[i].icon);
   state.categories[i].icon = ICONS[(cur + 1) % ICONS.length];
-  save(); renderCatSettings(); renderLists();
+  save(); renderCatSettings(); render();
 }
 
 function cycleCatColor(i) {
   const cur = COLORS.indexOf(state.categories[i].color);
   state.categories[i].color = COLORS[(cur + 1) % COLORS.length];
-  save(); renderCatSettings(); renderLists();
+  save(); renderCatSettings(); render();
 }
 
 function deleteCat(i) {
@@ -459,7 +467,7 @@ function deleteCat(i) {
   state.categories.splice(i, 1);
   state.recurring = state.recurring.filter(r => r.cat !== c.id);
   Object.values(state.days).forEach(d => { if (d && d.tasks) d.tasks = d.tasks.filter(t => t.cat !== c.id); });
-  save(); renderCatSettings(); renderRecSettings(); renderLists();
+  save(); renderCatSettings(); renderRecSettings(); render();
 }
 
 function addCat() {
@@ -467,7 +475,7 @@ function addCat() {
   if (!name) return;
   const i = state.categories.length;
   state.categories.push({ id: 'c_' + Date.now(), name, icon: ICONS[i % ICONS.length], color: COLORS[i % COLORS.length] });
-  save(); renderCatSettings(); renderRecSettings(); renderLists();
+  save(); renderCatSettings(); renderRecSettings(); render();
 }
 
 function renderRecSettings() {
@@ -485,8 +493,15 @@ function renderRecSettings() {
 
 function deleteRec(i) {
   if (!confirm('Terugkerende taak "' + state.recurring[i].name + '" permanent verwijderen?')) return;
+  const rec = state.recurring[i];
   state.recurring.splice(i, 1);
-  save(); renderRecSettings();
+  // Remove from today and tomorrow if they came from this recurring task
+  [activeDate(), tomorrowDate()].forEach(dateKey => {
+    if (state.days[dateKey]) {
+      state.days[dateKey].tasks = state.days[dateKey].tasks.filter(t => t.recurringId !== rec.id);
+    }
+  });
+  save(); renderRecSettings(); render();
 }
 
 function addRec() {
@@ -496,8 +511,19 @@ function addRec() {
   const pick = prompt('In welke categorie?\n\n' + catList + '\n\nTyp het nummer:', '1');
   const idx = parseInt(pick, 10) - 1;
   if (isNaN(idx) || idx < 0 || idx >= state.categories.length) return;
-  state.recurring.push({ id: 'r_' + Date.now(), cat: state.categories[idx].id, name });
-  save(); renderRecSettings();
+  const rec = { id: 'r_' + Date.now(), cat: state.categories[idx].id, name };
+  state.recurring.push(rec);
+  // Add to today and tomorrow immediately
+  [activeDate(), tomorrowDate()].forEach(dateKey => {
+    if (state.days[dateKey]) {
+      // Only add if not already present
+      const already = state.days[dateKey].tasks.some(t => t.recurringId === rec.id);
+      if (!already) {
+        state.days[dateKey].tasks.push({ id: uid(), cat: rec.cat, name: rec.name, done: false, recurringId: rec.id });
+      }
+    }
+  });
+  save(); renderRecSettings(); render();
 }
 
 function resetToday() {
@@ -633,18 +659,25 @@ let sbTimer = null;
 
 async function sbPull() {
   try {
-    const res = await fetch(SB_URL + '/rest/v1/app_state?key=eq.' + SB_APP + '&select=data', {
+    const res = await fetch(SB_URL + '/rest/v1/app_state?key=eq.' + SB_APP + '&select=data,updated_at', {
       headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
     });
     if (!res.ok) return false;
     const rows = await res.json();
     if (!rows || !rows[0] || !rows[0].data || !rows[0].data[LS]) return false;
-    const incoming = JSON.stringify(rows[0].data[LS]);
+    const remote = rows[0].data[LS];
+    const incoming = JSON.stringify(remote);
     const local = localStorage.getItem(LS);
     if (incoming === local) return false;
-    // Remote is different — apply it
+    // Always apply remote during boot (state is null), otherwise only if remote is newer
+    if (state !== null) {
+      // Compare updated_at timestamps if available
+      const remoteTime = rows[0].updated_at ? new Date(rows[0].updated_at).getTime() : 0;
+      const localState = JSON.parse(local || '{}');
+      const localTime = localState._savedAt || 0;
+      if (localTime > remoteTime) return false; // local is newer
+    }
     localStorage.setItem(LS, incoming);
-    state = loadState();
     return true;
   } catch(e) { return false; }
 }
@@ -678,12 +711,12 @@ function sbPush() {
 document.addEventListener('visibilitychange', async () => {
   if (!document.hidden) {
     const changed = await sbPull();
-    if (changed) { render(); renderChart(); }
+    if (changed) { state = loadState(); render(); renderChart(); }
   }
 });
 window.addEventListener('focus', async () => {
   const changed = await sbPull();
-  if (changed) { render(); renderChart(); }
+  if (changed) { state = loadState(); render(); renderChart(); }
 });
 
 // Push on close
@@ -702,19 +735,24 @@ window.addEventListener('pagehide', () => {
 });
 
 // ============================================================
-// BOOT
+// BOOT — pull first, then load state, then render
 // ============================================================
 document.getElementById('appTitle').textContent = CONFIG.appTitle;
 
 (async function boot() {
-  // First pull from Supabase
+  // Step 1: pull from Supabase into localStorage
   await sbPull();
-  // Then load state (which now has remote data if any)
+  // Step 2: load state from localStorage (now has remote data)
   state = loadState();
+  // Step 3: ensure today exists
   ensureDate(activeDate());
+  // Step 4: hide loader, show app
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('mainShell').style.visibility = 'visible';
+  // Step 5: render
   render();
   renderChart();
-  // Push local state up
+  // Step 6: push our local state up
   sbPush();
   // Re-check every minute for day rollover
   setInterval(() => { ensureDate(activeDate()); render(); renderChart(); }, 60000);
