@@ -155,6 +155,17 @@ html,body{margin:0;padding:0;background:radial-gradient(ellipse 80% 60% at 50% 0
 .ag-week-cell.today .ag-week-day{color:var(--info);}
 .ag-week-item{display:block;font-size:10px;padding:2px 5px;border-radius:4px;background:rgba(110,231,183,0.14);color:var(--good);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
 .ag-week-item:hover{background:rgba(110,231,183,0.26);}
+/* Form inputs in agenda */
+.move-inp{width:100%;background:rgba(0,0,0,0.35);border:1px solid var(--border);color:var(--t1);border-radius:10px;font-family:inherit;font-size:14px;padding:11px 13px;outline:none;box-sizing:border-box;}
+.move-inp:focus{border-color:rgba(110,231,183,0.4);}
+.move-inp option{background:#111113;color:#fff;}
+/* Time scroll picker */
+.time-picker{display:flex;align-items:center;gap:6px;}
+.time-scroll{flex:1;height:44px;background:rgba(0,0,0,0.35);border:1px solid var(--border);border-radius:10px;color:var(--t1);font-family:inherit;font-size:15px;font-weight:600;text-align:center;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;}
+.time-scroll:focus{border-color:rgba(110,231,183,0.4);}
+.time-scroll option{background:#111113;}
+.time-sep{font-size:18px;font-weight:700;color:var(--t2);flex-shrink:0;}
+.dur-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 </style>
 </head>
 <body>
@@ -213,17 +224,32 @@ html,body{margin:0;padding:0;background:radial-gradient(ellipse 80% 60% at 50% 0
 <div class="modal-bg" id="setModal">
   <div class="modal">
     <h3>Instellingen</h3>
-    <p class="modal-note">Nieuwe dag begint om 5:00. Terugkerende taken verschijnen elke dag automatisch.</p>
+    <p class="modal-note">Nieuwe dag begint om 5:00.</p>
+
     <h4>Planning & Afspraken</h4>
     <div id="plannedListSettings"></div>
-    <button class="add-more" onclick="openAgenda()">📅 Afspraak inplannen via agenda</button>
+    <button class="add-more" onclick="openAgenda()">📅 Open agenda</button>
+
+    <h4>Water doel</h4>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0">
+      <span style="font-size:14px;color:var(--t2);flex:1">Dagelijks doel</span>
+      <button class="wbtn" onclick="adjustWaterGoal(-0.5)" style="width:36px;height:36px;font-size:18px">−</button>
+      <span id="waterGoalDisplay" style="font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;min-width:48px;text-align:center">3L</span>
+      <button class="wbtn" onclick="adjustWaterGoal(0.5)" style="width:36px;height:36px;font-size:18px">+</button>
+    </div>
 
     <h4>Categorieën</h4>
     <div id="catList"></div>
     <button class="add-more" onclick="addCat()">+ Categorie toevoegen</button>
-    <h4>Terugkerende taken</h4>
+
+    <h4>Terugkerende taken dagelijks</h4>
     <div id="recList"></div>
-    <button class="add-more" onclick="addRec()">+ Terugkerende taak toevoegen</button>
+    <button class="add-more" onclick="addRec()">+ Dagelijkse taak toevoegen</button>
+
+    <h4>Terugkerende taken interval</h4>
+    <div id="recIntervalList"></div>
+    <button class="add-more" onclick="addRecInterval()">+ Interval taak toevoegen</button>
+
     <div class="modal-actions">
       <button class="btn-danger" onclick="resetToday()">Reset vandaag</button>
       <button class="btn-sec" onclick="closeSettings()">Sluiten</button>
@@ -247,7 +273,8 @@ function defaultState() {
   return {
     categories: CONFIG.categories.map(c => Object.assign({}, c)),
     recurring:  CONFIG.recurring.map(r => Object.assign({}, r)),
-    planned: [], // [{id, name, type:'once'|'interval', date, interval, lastAdded, cat}]
+    recurringInterval: [], // [{id, name, cat, interval, startDate}]
+    planned: [],
     days: {},
     history: {}
   };
@@ -259,11 +286,12 @@ function loadState() {
     if (!raw) return defaultState();
     const s = JSON.parse(raw);
     // migrations
-    if (!s.categories) s.categories = CONFIG.categories.map(c => Object.assign({}, c));
-    if (!s.recurring)  s.recurring  = CONFIG.recurring.map(r => Object.assign({}, r));
-    if (!s.planned)    s.planned    = [];
-    if (!s.days)       s.days = {};
-    if (!s.history)    s.history = {};
+    if (!s.categories)         s.categories = CONFIG.categories.map(c => Object.assign({}, c));
+    if (!s.recurring)          s.recurring  = CONFIG.recurring.map(r => Object.assign({}, r));
+    if (!s.recurringInterval)  s.recurringInterval = [];
+    if (!s.planned)            s.planned    = [];
+    if (!s.days)               s.days = {};
+    if (!s.history)            s.history = {};
     s.recurring.forEach(r => { if (r.list && !r.cat) { r.cat = r.list; delete r.list; } });
     Object.values(s.days).forEach(d => {
       if (d && d.tasks) d.tasks.forEach(t => { if (t.list && !t.cat) { t.cat = t.list; delete t.list; } });
@@ -333,6 +361,8 @@ function ensureDate(dateKey) {
     }
     // inject planned items that belong to this date
     injectPlanned(dateKey, tasks);
+    // inject interval recurring tasks
+    injectIntervalRecurring(dateKey, tasks);
     state.days[dateKey] = { tasks };
     save();
   }
@@ -343,24 +373,10 @@ function injectPlanned(dateKey, tasks) {
   try {
     if (!state.planned || !state.planned.length) return;
     const genCat = (state.categories[0] || {}).id || 'general';
-    state.planned.forEach(p => {
-      if (!p || !p.id || !p.date) return;
+    plannedForChecklist(dateKey).forEach(p => {
       const already = tasks.some(t => t.plannedId === p.id);
       if (already) return;
-      let belongs = false;
-      if (p.type === 'once') {
-        belongs = p.date === dateKey;
-      } else if (p.type === 'interval' && p.interval > 0) {
-        const start = new Date(p.date + 'T12:00:00');
-        const cur   = new Date(dateKey + 'T12:00:00');
-        if (cur >= start) {
-          const diffDays = Math.round((cur - start) / 86400000);
-          belongs = diffDays % p.interval === 0;
-        }
-      }
-      if (belongs) {
-        tasks.push({ id: uid(), cat: p.cat || genCat, name: p.name, done: false, plannedId: p.id });
-      }
+      tasks.push({ id: uid(), cat: p.cat || genCat, name: p.name, done: false, plannedId: p.id });
     });
   } catch(e) { console.error('injectPlanned error:', e); }
 }
@@ -372,9 +388,76 @@ function reinjectPlannedForDate(dateKey) {
   injectPlanned(dateKey, tasks);
 }
 
-// ============================================================
-// AGENDA MODAL
-// ============================================================
+function injectIntervalRecurring(dateKey, tasks) {
+  try {
+    if (!state.recurringInterval || !state.recurringInterval.length) return;
+    state.recurringInterval.forEach(r => {
+      if (!r || !r.id || !r.startDate || !r.interval) return;
+      const already = tasks.some(t => t.intervalRecId === r.id);
+      if (already) return;
+      const start = new Date(r.startDate + 'T12:00:00');
+      const cur   = new Date(dateKey + 'T12:00:00');
+      if (cur < start) return;
+      const diff = Math.round((cur - start) / 86400000);
+      if (diff % r.interval === 0) {
+        tasks.push({ id: uid(), cat: r.cat, name: r.name, done: false, intervalRecId: r.id });
+      }
+    });
+  } catch(e) { console.error('injectIntervalRecurring:', e); }
+}
+
+function renderRecIntervalSettings() {
+  const wrap = document.getElementById('recIntervalList');
+  if (!wrap) return;
+  if (!state.recurringInterval || !state.recurringInterval.length) {
+    wrap.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.3);font-style:italic;padding:4px 0 8px">Geen interval taken.</div>';
+    return;
+  }
+  wrap.innerHTML = state.recurringInterval.map((r, i) => {
+    const c = state.categories.find(x => x.id === r.cat) || state.categories[0];
+    return '<div class="set-row">'
+      + '<span class="rec-tag" style="background:' + c.color + '22;color:' + c.color + '">' + esc(c.name) + '</span>'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-size:13px;color:var(--t1)">' + esc(r.name) + '</div>'
+      + '<div style="font-size:10px;color:var(--t3);margin-top:1px">elke ' + r.interval + ' dagen · vanaf ' + r.startDate + '</div>'
+      + '</div>'
+      + '<button class="set-del" onclick="deleteRecInterval(' + i + ')">×</button>'
+      + '</div>';
+  }).join('');
+}
+
+function deleteRecInterval(i) {
+  const r = state.recurringInterval[i];
+  if (!confirm('Interval taak "' + r.name + '" verwijderen?')) return;
+  state.recurringInterval.splice(i, 1);
+  [activeDate(), tomorrowDate()].forEach(dk => {
+    if (state.days[dk]) state.days[dk].tasks = state.days[dk].tasks.filter(t => t.intervalRecId !== r.id);
+  });
+  save(); renderRecIntervalSettings();
+}
+
+function addRecInterval() {
+  const name = (prompt('Naam van de interval taak:') || '').trim();
+  if (!name) return;
+  const intervalStr = prompt('Elke hoeveel dagen? (bijv. 14 voor elke 2 weken):', '14');
+  const interval = parseInt(intervalStr, 10);
+  if (isNaN(interval) || interval < 1) { alert('Ongeldig interval.'); return; }
+  const startDate = prompt('Startdatum (JJJJ-MM-DD):', dateStr(new Date()));
+  if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) { alert('Ongeldige datum.'); return; }
+  const catList = state.categories.map((c, i) => (i+1) + '. ' + c.name).join('\n');
+  const pick = prompt('In welke categorie?\n\n' + catList + '\n\nTyp het nummer:', '1');
+  const idx = parseInt(pick, 10) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= state.categories.length) return;
+  const r = { id: 'ri_' + Date.now(), name, cat: state.categories[idx].id, interval, startDate };
+  state.recurringInterval.push(r);
+  [activeDate(), tomorrowDate()].forEach(dk => {
+    if (state.days[dk]) {
+      const tasks = state.days[dk].tasks;
+      injectIntervalRecurring(dk, tasks);
+    }
+  });
+  save(); renderRecIntervalSettings();
+}
 let agView = 'month';
 let agCursor = new Date();
 let agSelectedDate = null;
@@ -387,7 +470,26 @@ function openAgenda() {
   agCursor = new Date(); agCursor.setHours(0,0,0,0);
   agSelectedDate = null;
   document.getElementById('agendaModal').classList.add('show');
-  document.getElementById('agDayDetail').style.display = 'none';
+  document.getElementById('agDayPanel').style.display = 'none';
+  // Populate hour/min pickers
+  const hourSel = document.getElementById('agHour');
+  const minSel  = document.getElementById('agMin');
+  if (hourSel && hourSel.options.length <= 1) {
+    for (let h = 0; h <= 23; h++) {
+      const o = document.createElement('option');
+      o.value = String(h).padStart(2,'0');
+      o.textContent = String(h).padStart(2,'0');
+      hourSel.appendChild(o);
+    }
+  }
+  if (minSel && minSel.options.length <= 1) {
+    for (let m = 0; m <= 55; m += 5) {
+      const o = document.createElement('option');
+      o.value = String(m).padStart(2,'0');
+      o.textContent = String(m).padStart(2,'0');
+      minSel.appendChild(o);
+    }
+  }
   renderAgendaModal();
 }
 function closeAgenda() {
@@ -410,8 +512,27 @@ function agShift(dir) {
   renderAgendaModal();
 }
 
-// Get all planned items for a specific date
+// For CALENDAR display: includes multi-day spans
 function plannedForDate(dk) {
+  if (!state || !state.planned) return [];
+  return state.planned.filter(p => {
+    if (p.type === 'once') {
+      // single or multi-day: show on all days in range
+      return dk >= p.date && dk <= (p.endDate || p.date);
+    }
+    if (p.type === 'interval' && p.interval > 0) {
+      const start = new Date(p.date + 'T12:00:00');
+      const cur   = new Date(dk + 'T12:00:00');
+      if (cur < start) return false;
+      const diff = Math.round((cur - start) / 86400000);
+      return diff % p.interval === 0;
+    }
+    return false;
+  });
+}
+
+// For CHECKLIST injection: only on start date
+function plannedForChecklist(dk) {
   if (!state || !state.planned) return [];
   return state.planned.filter(p => {
     if (p.type === 'once') return p.date === dk;
@@ -488,39 +609,115 @@ function renderAgWeek() {
 function agSelectDay(dk) {
   agSelectedDate = dk;
   renderAgendaModal();
-  const detail = document.getElementById('agDayDetail');
+  const panel = document.getElementById('agDayPanel');
   const title = document.getElementById('agDayTitle');
   const itemsWrap = document.getElementById('agDayItems');
   const [y,m,d] = dk.split('-').map(Number);
   title.textContent = d + ' ' + AG_MONS[m-1] + ' ' + y;
+
+  // Show existing items
   const items = plannedForDate(dk);
   if (!items.length) {
-    itemsWrap.innerHTML = '<div style="font-size:12px;color:var(--t3);font-style:italic;padding:4px 0">Geen afspraken op deze dag.</div>';
+    itemsWrap.innerHTML = '<div style="font-size:12px;color:var(--t3);font-style:italic;padding:4px 0 10px">Geen afspraken op deze dag.</div>';
   } else {
-    itemsWrap.innerHTML = items.map(p =>
-      '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">'
-      + '<span style="font-size:14px">' + esc(p.name) + (p.type==='interval'?' <span style="font-size:10px;color:var(--t4)">(elke '+p.interval+'d)</span>':'') + '</span>'
-      + '<div style="display:flex;gap:6px">'
-      + (p.type==='once'?'<button onclick="agMoveItem(\'' + p.id + '\')" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--t2);border-radius:6px;cursor:pointer">Verplaats</button>':'')
-      + '<button onclick="agDeleteItem(\'' + p.id + '\')" style="font-size:11px;padding:4px 10px;border:1px solid rgba(255,138,138,0.3);background:rgba(255,138,138,0.06);color:var(--bad);border-radius:6px;cursor:pointer">Verwijder</button>'
-      + '</div></div>'
-    ).join('');
+    itemsWrap.innerHTML = items.map(p => {
+      const sub = [p.time, p.duration].filter(Boolean).join(' · ');
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">'
+        + '<div><div style="font-size:14px">' + esc(p.name) + '</div>'
+        + (sub ? '<div style="font-size:11px;color:var(--t3);margin-top:2px">' + esc(sub) + '</div>' : '')
+        + '</div>'
+        + '<div style="display:flex;gap:6px">'
+        + (p.type==='once'?'<button onclick="agMoveItem(\'' + p.id + '\')" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--t2);border-radius:6px;cursor:pointer">Verplaats</button>':'')
+        + '<button onclick="agDeleteItem(\'' + p.id + '\')" style="font-size:11px;padding:4px 10px;border:1px solid rgba(255,138,138,0.3);background:rgba(255,138,138,0.06);color:var(--bad);border-radius:6px;cursor:pointer">×</button>'
+        + '</div></div>';
+    }).join('');
   }
-  detail.style.display = 'block';
+
+  // Reset form
+  document.getElementById('agName').value = '';
+  const agHourEl = document.getElementById('agHour');
+  const agMinEl  = document.getElementById('agMin');
+  if (agHourEl) agHourEl.value = '';
+  if (agMinEl)  agMinEl.value  = '';
+  document.getElementById('agDurType').value = 'allday';
+  document.getElementById('agDurExtra').style.display = 'none';
+  document.getElementById('agDurExtra').innerHTML = '';
+  panel.style.display = 'block';
+}
+
+function agDurTypeChange() {
+  const type = document.getElementById('agDurType').value;
+  const extra = document.getElementById('agDurExtra');
+  if (type === 'hours') {
+    extra.style.display = 'block';
+    extra.innerHTML = '<div class="dur-row">'
+      + '<input id="agDurHours" class="move-inp" type="number" min="0" max="48" placeholder="Uren (bijv. 1)">'
+      + '<input id="agDurMins" class="move-inp" type="number" min="0" max="55" step="5" placeholder="Minuten (bijv. 30)">'
+      + '</div>';
+  } else if (type === 'multiday') {
+    extra.style.display = 'block';
+    extra.innerHTML = '<input id="agEndDate" class="move-inp" type="text" placeholder="Einddatum (JJJJ-MM-DD)" style="width:100%" value="' + (agSelectedDate||'') + '">';
+  } else {
+    extra.style.display = 'none';
+    extra.innerHTML = '';
+  }
+}
+
+function agSaveAppointment() {
+  const name = (document.getElementById('agName').value || '').trim();
+  if (!name) { alert('Geef een naam op.'); return; }
+
+  // Time from scroll pickers
+  const hour = document.getElementById('agHour') ? document.getElementById('agHour').value : '';
+  const min  = document.getElementById('agMin')  ? document.getElementById('agMin').value  : '';
+  const time = (hour && min) ? hour + ':' + min : null;
+
+  const durType = document.getElementById('agDurType').value;
+  const genCat = (state.categories[0] || {}).id || 'general';
+
+  let duration = null;
+  let endDate = agSelectedDate;
+
+  if (durType === 'hours') {
+    const h = parseInt(document.getElementById('agDurHours') ? document.getElementById('agDurHours').value : '0', 10) || 0;
+    const m = parseInt(document.getElementById('agDurMins')  ? document.getElementById('agDurMins').value  : '0', 10) || 0;
+    if (h > 0 && m > 0)      duration = h + 'u ' + m + 'min';
+    else if (h > 0)           duration = h + ' uur';
+    else if (m > 0)           duration = m + ' min';
+  } else if (durType === 'multiday') {
+    const ed = document.getElementById('agEndDate') ? document.getElementById('agEndDate').value : '';
+    if (ed && /^\d{4}-\d{2}-\d{2}$/.test(ed) && ed >= agSelectedDate) {
+      endDate = ed;
+      const [sy,sm,sd] = agSelectedDate.split('-').map(Number);
+      const [ey,em,ed2] = ed.split('-').map(Number);
+      const days = Math.round((new Date(ey,em-1,ed2) - new Date(sy,sm-1,sd)) / 86400000) + 1;
+      duration = days + ' dagen';
+    }
+  }
+
+  state.planned.push({
+    id: 'p_' + Date.now(),
+    name, type: 'once',
+    date: agSelectedDate,
+    endDate,
+    time,
+    duration,
+    cat: genCat
+  });
+
+  [activeDate(), tomorrowDate()].forEach(dk => {
+    if (state.days[dk]) reinjectPlannedForDate(dk);
+  });
+
+  save();
+  agSelectDay(agSelectedDate);
+  renderAgendaModal();
+  render();
 }
 
 function addPlannedOnDate(dk) {
-  const name = (prompt('Naam van de afspraak:') || '').trim();
-  if (!name) return;
-  const dateSuggestion = dk || dateStr(new Date());
-  const dateInput = prompt('Datum (JJJJ-MM-DD):', dateSuggestion);
-  if (!dateInput || !/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) { alert('Ongeldige datum. Gebruik: 2026-06-28'); return; }
-  const genCat = (state.categories[0] || {}).id || 'general';
-  state.planned.push({ id: 'p_' + Date.now(), name, type: 'once', date: dateInput, cat: genCat });
-  [activeDate(), tomorrowDate()].forEach(d => { if (state.days[d]) reinjectPlannedForDate(d); });
-  save(); renderAgendaModal();
-  if (agSelectedDate) agSelectDay(agSelectedDate);
-  render();
+  // legacy — just open agenda on that date
+  if (dk) { agSelectedDate = dk; agSelectDay(dk); }
 }
 
 function agEditItem(id) {
@@ -571,7 +768,8 @@ function doDelete(id) {
 
 function doWater(id, delta) {
   const t = currentTasks().find(t => t.id === id); if (!t) return;
-  t.count = Math.max(0, (t.count || 0) + delta); save(); render();
+  t.count = Math.max(0, Math.round(((t.count || 0) + delta) * 10) / 10);
+  save(); render();
 }
 
 function doAdd(catId, name) {
@@ -649,11 +847,11 @@ function renderLists() {
           const full = t.count >= t.target;
           inner += '<div class="wtask' + (full ? ' full' : '') + '">'
             + '<div><div class="wname">' + esc(t.name) + (full ? ' ✓' : '') + '</div>'
-            + '<div class="wprog">' + t.count + ' / ' + t.target + ' liter</div></div>'
+            + '<div class="wprog">' + t.count.toFixed(1).replace('.0','') + ' / ' + t.target + ' liter</div></div>'
             + '<div class="wctrl">'
-            + '<button class="wbtn" onclick="doWater(\'' + t.id + '\',-1)"' + (t.count <= 0 ? ' disabled' : '') + '>−</button>'
-            + '<span class="wcnt">' + t.count + 'L</span>'
-            + '<button class="wbtn" onclick="doWater(\'' + t.id + '\',1)">+</button>'
+            + '<button class="wbtn" onclick="doWater(\'' + t.id + '\',-0.5)"' + (t.count <= 0 ? ' disabled' : '') + '>−</button>'
+            + '<span class="wcnt">' + t.count.toFixed(1).replace('.0','') + 'L</span>'
+            + '<button class="wbtn" onclick="doWater(\'' + t.id + '\',0.5)">+</button>'
             + '</div></div>';
         } else {
           inner += '<div class="task' + (t.overdue ? ' overdue' : '') + '">'
@@ -666,7 +864,7 @@ function renderLists() {
     }
     const iid = 'inp_' + cat.id;
     html += '<div class="list-block">'
-      + '<div class="list-head" style="color:' + cat.color + '">' + cat.icon + ' ' + esc(cat.name) + '</div>'
+      + '<div class="list-head" style="color:' + cat.color + '">' + esc(cat.name) + '</div>'
       + '<div>' + inner + '</div>'
       + '<div class="add-row">'
       + '<input class="add-inp" id="' + iid + '" type="text" placeholder="Taak toevoegen…" onkeydown="if(event.key===\'Enter\'){doAdd(\'' + cat.id + '\',this.value);this.value=\'\'}">'
@@ -679,10 +877,41 @@ function renderLists() {
 // ============================================================
 // SETTINGS
 // ============================================================
+function getWaterTarget() {
+  // Find water task in recurring config
+  const r = state.recurring.find(r => r.water);
+  return r ? (r.target || 3) : 3;
+}
+
+function adjustWaterGoal(delta) {
+  const r = state.recurring.find(r => r.water);
+  if (!r) return;
+  r.target = Math.max(0.5, Math.round(((r.target || 3) + delta) * 10) / 10);
+  // Update in today/tomorrow tasks too
+  [activeDate(), tomorrowDate()].forEach(dk => {
+    if (state.days[dk]) {
+      state.days[dk].tasks.forEach(t => {
+        if (t.recurringId === r.id && t.water) t.target = r.target;
+      });
+    }
+  });
+  save(); renderWaterGoalDisplay(); render();
+}
+
+function renderWaterGoalDisplay() {
+  const el = document.getElementById('waterGoalDisplay');
+  if (el) {
+    const t = getWaterTarget();
+    el.textContent = t.toFixed(1).replace('.0','') + 'L';
+  }
+}
+
 function openSettings() {
   renderCatSettings();
   renderRecSettings();
+  renderRecIntervalSettings();
   renderPlannedSettingsPreview();
+  renderWaterGoalDisplay();
   document.getElementById('setModal').classList.add('show');
 }
 
@@ -713,7 +942,6 @@ function renderCatSettings() {
   const wrap = document.getElementById('catList');
   wrap.innerHTML = state.categories.map((c, i) =>
     '<div class="set-row">'
-    + '<button class="set-icon" onclick="cycleCatIcon(' + i + ')">' + c.icon + '</button>'
     + '<span class="set-swatch" style="background:' + c.color + '" onclick="cycleCatColor(' + i + ')"></span>'
     + '<input value="' + esc(c.name) + '" oninput="state.categories[' + i + '].name=this.value;save();render()">'
     + '<button class="set-del" onclick="deleteCat(' + i + ')">×</button>'
@@ -747,7 +975,7 @@ function addCat() {
   const name = (prompt('Naam van de nieuwe categorie:') || '').trim();
   if (!name) return;
   const i = state.categories.length;
-  state.categories.push({ id: 'c_' + Date.now(), name, icon: ICONS[i % ICONS.length], color: COLORS[i % COLORS.length] });
+  state.categories.push({ id: 'c_' + Date.now(), name, color: COLORS[i % COLORS.length] });
   save(); renderCatSettings(); renderRecSettings(); render();
 }
 
@@ -1050,13 +1278,43 @@ document.getElementById('appTitle').textContent = CONFIG.appTitle;
       </div>
     </div>
     <div id="agCalWrap"></div>
-    <button class="add-more" style="margin-top:14px" onclick="addPlannedOnDate(null)">+ Afspraak of taak inplannen</button>
 
-    <!-- Selected day detail -->
-    <div id="agDayDetail" style="display:none;margin-top:14px;padding:14px;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:12px">
+    <!-- Day detail panel — shown on day click -->
+    <div id="agDayPanel" style="display:none;margin-top:14px;padding:14px;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:12px">
       <div style="font-size:12px;font-weight:700;letter-spacing:0.10em;text-transform:uppercase;color:var(--t3);margin-bottom:10px" id="agDayTitle">—</div>
       <div id="agDayItems"></div>
-      <button class="add-more" style="margin-top:8px" onclick="addPlannedOnDate(agSelectedDate)">+ Toevoegen op deze dag</button>
+
+      <!-- Add form -->
+      <div id="agAddForm" style="margin-top:10px;display:flex;flex-direction:column;gap:10px">
+        <input id="agName" class="move-inp" placeholder="Naam afspraak of taak…" type="text">
+
+        <!-- Time picker -->
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--t3);margin-bottom:6px">Tijd (optioneel)</div>
+          <div class="time-picker">
+            <select id="agHour" class="time-scroll">
+              <option value="">--</option>
+            </select>
+            <span class="time-sep">:</span>
+            <select id="agMin" class="time-scroll">
+              <option value="">--</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Duration -->
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--t3);margin-bottom:6px">Duur</div>
+          <select id="agDurType" class="move-inp" onchange="agDurTypeChange()" style="appearance:none;-webkit-appearance:none">
+            <option value="allday">Hele dag</option>
+            <option value="hours">Uren / minuten</option>
+            <option value="multiday">Meerdere dagen</option>
+          </select>
+        </div>
+        <div id="agDurExtra" style="display:none"></div>
+
+        <button class="add-btn" style="align-self:flex-start;padding:0 20px;height:42px;font-size:14px" onclick="agSaveAppointment()">Toevoegen</button>
+      </div>
     </div>
   </div>
 </div>
