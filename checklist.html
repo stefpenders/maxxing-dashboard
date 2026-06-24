@@ -347,27 +347,41 @@ function ensureDate(dateKey) {
   if (!state.days[dateKey]) {
     const tasks = state.recurring.map(r => {
       if (r.water) return { id: uid(), cat: r.cat, name: r.name, water: true, target: r.target || 3, count: 0, recurringId: r.id };
-      return { id: uid(), cat: r.cat, name: r.name, done: false, recurringId: r.id };
+      return { id: uid(), cat: r.cat, name: r.name, note: r.note || null, done: false, recurringId: r.id };
     });
-    // carry forward unfinished non-recurring from previous day (only for today, not tomorrow)
-    if (dateKey === activeDate()) {
-      const keys = Object.keys(state.days).filter(k => k < dateKey).sort();
-      if (keys.length) {
-        const prev = state.days[keys[keys.length - 1]];
-        if (prev && prev.tasks) {
-          prev.tasks.forEach(t => {
-            const done = t.water ? t.count >= t.target : t.done;
-            if (!done && !t.recurringId) tasks.push({ id: uid(), cat: t.cat, name: t.name, done: false, overdue: true });
-          });
-        }
-      }
-    }
     // inject planned items that belong to this date
     injectPlanned(dateKey, tasks);
     // inject interval recurring tasks
     injectIntervalRecurring(dateKey, tasks);
     state.days[dateKey] = { tasks };
     save();
+  }
+  // carry forward unfinished tasks from previous day — runs every time to catch missed days
+  if (dateKey === activeDate()) {
+    const existing = state.days[dateKey];
+    const hasOverdue = existing.tasks.some(t => t.overdue);
+    if (!hasOverdue) {
+      // find most recent previous day
+      const keys = Object.keys(state.days).filter(k => k < dateKey).sort();
+      if (keys.length) {
+        const prev = state.days[keys[keys.length - 1]];
+        if (prev && prev.tasks) {
+          let added = false;
+          prev.tasks.forEach(t => {
+            const done = t.water ? t.count >= t.target : t.done;
+            // only carry forward non-recurring, non-planned losse taken
+            if (!done && !t.recurringId && !t.intervalRecId && !t.plannedId) {
+              const alreadyThere = existing.tasks.some(x => x.name === t.name && x.overdue);
+              if (!alreadyThere) {
+                existing.tasks.unshift({ id: uid(), cat: t.cat, name: t.name, note: t.note || null, done: false, overdue: true });
+                added = true;
+              }
+            }
+          });
+          if (added) save();
+        }
+      }
+    }
   }
   return state.days[dateKey];
 }
@@ -1134,10 +1148,9 @@ function renderChart() {
   const labelEl = document.getElementById('chartLabel');
 
   labelEl.textContent = chartPeriod === 'week' ? 'Afgelopen 7 dagen' : chartPeriod === 'month' ? 'Afgelopen 30 dagen' : 'Afgelopen jaar (per week)';
-  const avg = filled.length ? Math.round(filled.reduce((a,b) => a+b, 0) / filled.length) : 0;
-  avgEl.textContent = 'gem. ' + avg + ' taken/dag';
+  avgEl.textContent = ''; // remove average
 
-  // Stats
+  // Stats — total and best only, no average
   const total = filled.reduce((a,b) => a+b, 0);
   const best = filled.length ? Math.max(...filled) : 0;
   const streak = calcStreak();
@@ -1162,10 +1175,14 @@ function renderChart() {
   vals.forEach((v, i) => {
     if (v === null) return;
     const x = pad + i * ((W - pad * 2) / vals.length);
-    const h = (v / maxVal) * (H - pad * 2);
-    const y = H - pad - h;
-    const color = v >= avg * 1.2 ? '#6ee7b7' : v >= avg * 0.8 ? '#7DD3FC' : '#fbbf24';
-    svgHtml += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + Math.max(2, h).toFixed(1) + '" rx="3" fill="' + color + '" opacity="0.85"/>';
+    const barH = Math.max(4, (v / maxVal) * (H - pad * 2 - 14)); // leave 14px for number
+    const y = H - pad - barH;
+    const color = '#f0883e';
+    svgHtml += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + barH.toFixed(1) + '" rx="3" fill="' + color + '" opacity="0.75"/>';
+    // number above bar
+    if (v > 0) {
+      svgHtml += '<text x="' + (x + barW/2).toFixed(1) + '" y="' + (y - 3).toFixed(1) + '" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.5)" font-family="monospace">' + v + '</text>';
+    }
   });
   svg.innerHTML = svgHtml;
 
