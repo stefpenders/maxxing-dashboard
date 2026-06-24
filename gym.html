@@ -155,26 +155,32 @@ html, body {
 .seg-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
 .seg-label {
   font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
-  text-transform: uppercase; color: var(--text-3); min-width: 32px;
+  text-transform: uppercase; color: var(--text-3); min-width: 32px; flex-shrink: 0;
 }
 .seg {
-  display: flex; flex: 1;
+  display: flex; flex: 1; flex-wrap: wrap;
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
   border-radius: 12px; padding: 4px; gap: 3px;
+  overflow-x: auto; overflow-y: hidden;
 }
 .seg-btn {
-  flex: 1; padding: 10px 8px; border: none; background: transparent;
+  flex: 1; min-width: 70px; padding: 10px 8px; border: none; background: transparent;
   color: var(--text-3); border-radius: 8px;
-  font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
   transition: background 0.15s, color 0.15s;
   -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
 }
 .seg-btn.active {
   background: rgba(255,255,255,0.06);
   color: #ffffff;
   border-color: rgba(255,255,255,0.35);
   box-shadow: none;
+}
+
+@media (max-width: 480px) {
+  .seg-btn { font-size: 11px; padding: 8px 6px; min-width: 60px; }
 }
 
 /* Sub-title */
@@ -382,10 +388,10 @@ html, body {
 /* Pills (reps + rpe) */
 .pill-row { display: grid; gap: 6px; margin-bottom: 14px; }
 .pill {
-  padding: 12px 0; border: 1px solid var(--border);
+  padding: 10px 0; border: 1px solid var(--border);
   background: rgba(0,0,0,0.28); color: var(--text-2);
   border-radius: 8px; cursor: pointer;
-  font-family: inherit; font-size: 13px; font-weight: 600;
+  font-family: inherit; font-size: 12px; font-weight: 600;
   font-variant-numeric: tabular-nums; text-align: center;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
@@ -396,7 +402,81 @@ html, body {
   color: #ffffff; border-color: rgba(255,255,255,0.35); font-weight: 700;
 }
 .pill.rpe.active { background: rgba(240,136,62,0.15); border-color: rgba(240,136,62,0.35); color: #f0883e; }
-.rpe-hint { font-size: 10.5px; color: var(--text-3); margin-top: -6px; margin-bottom: 14px; line-height: 1.4; }
+
+/* Reps carousel - picker wheel style */
+#repsCarouselWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 0 -60px;
+  padding: 20px 60px;
+  position: relative;
+  background: rgba(240,136,62,0.02);
+  border: 1px solid rgba(240,136,62,0.08);
+  border-radius: 16px;
+  overflow: hidden;
+}
+#repsCarouselWrap::before,
+#repsCarouselWrap::after {
+  content: '◀ ▶';
+  position: absolute;
+  font-size: 12px;
+  color: rgba(240,136,62,0.4);
+  letter-spacing: 12px;
+  font-weight: 700;
+  pointer-events: none;
+}
+#repsCarouselWrap::before { left: 16px; }
+#repsCarouselWrap::after { right: 16px; }
+
+#repsCarousel {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+}
+
+.rep-button {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.35);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: all 0.15s ease-out;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  opacity: 0.5;
+  transform: scale(0.75);
+}
+
+.rep-button.active {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, rgba(240,136,62,0.15), rgba(240,136,62,0.05));
+  border: 2px solid rgba(240,136,62,0.5);
+  border-radius: 16px;
+  color: #f0883e;
+  font-size: 28px;
+  font-weight: 700;
+  opacity: 1;
+  transform: scale(1);
+  box-shadow: 0 0 20px rgba(240,136,62,0.25), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.rep-button:not(.active) {
+  width: 44px;
+  height: 44px;
+}
 
 /* Log button */
 .btn-primary {
@@ -701,19 +781,12 @@ html, body {
     </div>
 
     <!-- Log a set -->
-    <div class="sub-title">Set loggen</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="sub-title" style="margin:0">Set loggen</div>
+      <div id="setCounter" style="font-size:11px;color:var(--text-2);font-weight:600;letter-spacing:0.04em;background:rgba(240,136,62,0.1);padding:6px 10px;border-radius:8px;border:1px solid rgba(240,136,62,0.2)">Set — </div>
+    </div>
 
     <div class="bw-banner" id="bwBanner">Bodyweight — alleen reps</div>
-
-    <div class="prev-block" id="prevBlock">
-      <div class="prev-head" id="prevHead">Vorige keer</div>
-      <div id="prevSets"></div>
-    </div>
-
-    <div class="target-block" id="targetBlock">
-      <div class="target-head">Doel deze keer — progressive overload</div>
-      <div id="targetSets"></div>
-    </div>
 
     <div id="weightField">
       <div class="field-label" id="weightLabel">Gewicht (kg)</div>
@@ -724,14 +797,32 @@ html, body {
       </div>
     </div>
 
-    <div class="field-label">Reps</div>
-    <div class="pill-row" id="repsRow" data-value="8"></div>
+    <div class="field-label">Reps — swipe om te kiezen</div>
+    <div id="repsCarouselWrap">
+      <div id="repsCarousel"></div>
+    </div>
 
     <div class="field-label">RPE — hoe zwaar voelde het?</div>
     <div class="pill-row" id="rpeRow" data-value="8" style="grid-template-columns:repeat(5,1fr)"></div>
     <div class="rpe-hint" id="rpeHint">RPE 8 = nog ~2 reps in de tank. RPE 10 = niets meer over.</div>
 
-    <button class="btn-primary" id="logBtn">Set loggen</button>
+    <!-- Log buttons -->
+    <button class="btn-primary" id="logBtn" style="margin-top:14px">Set loggen</button>
+    <button class="btn-next" id="nextExBtn">Volgende oefening →</button>
+
+    <!-- Section divider -->
+    <div style="height:1px;background:var(--border);margin:24px 0;"></div>
+
+    <!-- Vorige keer & Doel deze keer — ONDER invoervakken -->
+    <div class="prev-block" id="prevBlock" style="margin-top:0">
+      <div class="prev-head" id="prevHead">Vorige keer</div>
+      <div id="prevSets"></div>
+    </div>
+
+    <div class="target-block" id="targetBlock">
+      <div class="target-head">Doel deze keer — progressive overload</div>
+      <div id="targetSets"></div>
+    </div>
 
     <!-- Rest timer -->
     <div class="rest-timer" id="restTimer">
@@ -748,8 +839,6 @@ html, body {
         <button class="rest-stop" id="restStopBtn">stop</button>
       </div>
     </div>
-
-    <button class="btn-next" id="nextExBtn">Volgende oefening →</button>
 
     <!-- This session -->
     <div class="sub-title">Deze training — <span id="thisExName">deze oefening</span></div>
@@ -1103,19 +1192,62 @@ html, body {
       $('weightField').style.display = '';
       $('oneRmLabel').textContent = 'Gesch. 1RM';
     }
+    
+    // Update set counter
+    const today = dayKey(new Date().toISOString());
+    const logsToday = (state.logs[ex.id] || []).filter(l => dayKey(l.date) === today).length;
+    const setNum = logsToday + 1;
+    const prevLogs = (state.logs[ex.id] || []).filter(l => dayKey(l.date) !== today);
+    const lastSessionSets = prevLogs.length > 0 ? prevLogs.length : '?';
+    $('setCounter').textContent = 'Set ' + setNum;
   }
   function renderRepsRow() {
-    const row = $('repsRow');
-    const ex = getCurrentEx();
-    let lo = 4, hi = 12;
-    if (ex) { lo = Math.max(1, ex.repMin); hi = Math.min(Math.max(ex.repMax + 2, 20), ex.repMin + 24); }
-    row.style.gridTemplateColumns = 'repeat(auto-fit, minmax(44px, 1fr))';
-    const prev = parseInt(row.dataset.value, 10);
-    const active = (prev >= lo && prev <= hi) ? prev : (ex ? ex.repMax : 8);
+    const carousel = $('repsCarousel');
+    const lo = 8, hi = 12;
+    const prev = parseInt(carousel.dataset.value, 10);
+    const active = (prev >= lo && prev <= hi) ? prev : 10;
+    
+    // Always render all 5 items
     let html = '';
-    for (let i = lo; i <= hi; i++) html += '<button class="pill' + (i===active?' active':'') + '" data-v="' + i + '">' + i + '</button>';
-    row.innerHTML = html; row.dataset.value = String(active);
+    for (let i = lo; i <= hi; i++) {
+      html += '<button class="rep-button' + (i===active?' active':'') + '" data-v="' + i + '" type="button">' + i + '</button>';
+    }
+    carousel.innerHTML = html;
+    carousel.dataset.value = String(active);
   }
+  
+  // Swipe handler for reps carousel
+  (function() {
+    const carousel = $('repsCarousel');
+    let touchStartX = 0;
+    
+    carousel.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+    
+    carousel.addEventListener('touchend', (e) => {
+      const touchEndX = e.changedTouches[0].clientX;
+      const diff = touchStartX - touchEndX;
+      const minSwipe = 30;
+      
+      if (Math.abs(diff) < minSwipe) return;
+      
+      const current = parseInt(carousel.dataset.value, 10) || 10;
+      let next = current;
+      
+      if (diff > minSwipe) {
+        next = Math.min(12, current + 1);
+      } else if (diff < -minSwipe) {
+        next = Math.max(8, current - 1);
+      }
+      
+      if (next !== current) {
+        carousel.querySelectorAll('.rep-button').forEach(x => x.classList.remove('active'));
+        carousel.querySelector('[data-v="' + next + '"]').classList.add('active');
+        carousel.dataset.value = String(next);
+      }
+    }, { passive: true });
+  })();
   function renderRpeRow() {
     const row = $('rpeRow');
     const prev = parseInt(row.dataset.value, 10) || (CONFIG.targetRPE || 8);
@@ -1449,10 +1581,10 @@ html, body {
   });
   $('wDown').addEventListener('click', () => { const ex=getCurrentEx(); if(!ex||ex.bw)return; $('wInput').value = Math.max(0,(parseFloat($('wInput').value)||0)-(ex.step||2.5)); });
   $('wUp').addEventListener('click', () => { const ex=getCurrentEx(); if(!ex||ex.bw)return; $('wInput').value = (parseFloat($('wInput').value)||0)+(ex.step||2.5); });
-  $('repsRow').addEventListener('click', e => {
-    const p = e.target.closest('.pill'); if(!p) return;
-    $('repsRow').querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
-    p.classList.add('active'); $('repsRow').dataset.value = p.dataset.v;
+  $('repsCarousel').addEventListener('click', e => {
+    const p = e.target.closest('.rep-button'); if(!p) return;
+    $('repsCarousel').querySelectorAll('.rep-button').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active'); $('repsCarousel').dataset.value = p.dataset.v;
   });
   $('rpeRow').addEventListener('click', e => {
     const p = e.target.closest('.pill'); if(!p) return;
@@ -1461,7 +1593,7 @@ html, body {
   });
   $('logBtn').addEventListener('click', () => {
     const ex = getCurrentEx(); if(!ex) return;
-    const reps = parseInt($('repsRow').dataset.value,10) || 0;
+    const reps = parseInt($('repsCarousel').dataset.value,10) || 0;
     if (reps <= 0) { alert('Kies een aantal reps.'); return; }
     const rpe = parseInt($('rpeRow').dataset.value,10) || null;
     const w = ex.bw ? 0 : (parseFloat($('wInput').value)||0);
