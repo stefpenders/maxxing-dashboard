@@ -158,16 +158,21 @@ html, body {
   text-transform: uppercase; color: var(--text-3); min-width: 32px; flex-shrink: 0;
 }
 .seg {
-  display: flex; flex: 1; flex-wrap: wrap;
+  display: flex; flex: 1; flex-direction: row;
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
   border-radius: 12px; padding: 4px; gap: 3px;
   overflow-x: auto; overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
+.seg::-webkit-scrollbar { height: 3px; }
+.seg::-webkit-scrollbar-track { background: transparent; }
+.seg::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
 .seg-btn {
-  flex: 1; min-width: 70px; padding: 10px 8px; border: none; background: transparent;
+  flex-shrink: 0; padding: 10px 12px; border: none; background: transparent;
   color: var(--text-3); border-radius: 8px;
-  font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
   transition: background 0.15s, color 0.15s;
   -webkit-tap-highlight-color: transparent;
   white-space: nowrap;
@@ -180,7 +185,7 @@ html, body {
 }
 
 @media (max-width: 480px) {
-  .seg-btn { font-size: 11px; padding: 8px 6px; min-width: 60px; }
+  .seg-btn { font-size: 11px; padding: 8px 10px; }
 }
 
 /* Sub-title */
@@ -402,6 +407,7 @@ html, body {
   color: #ffffff; border-color: rgba(255,255,255,0.35); font-weight: 700;
 }
 .pill.rpe.active { background: rgba(240,136,62,0.15); border-color: rgba(240,136,62,0.35); color: #f0883e; }
+.rpe-hint { font-size: 10px; color: var(--text-3); margin-top: -6px; margin-bottom: 14px; line-height: 1.4; }
 
 /* Reps rolling wheel picker - horizontal */
 #repsCarouselWrap {
@@ -1221,10 +1227,7 @@ html, body {
     setTimeout(() => {
       const activeBtn = carousel.querySelector('.rep-button.active');
       if (activeBtn) {
-        const carouselRect = carousel.getBoundingClientRect();
-        const btnRect = activeBtn.getBoundingClientRect();
-        const scrollOffset = btnRect.top - carouselRect.top - carouselRect.height / 2 + btnRect.height / 2;
-        carousel.scrollTop += scrollOffset;
+        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
       }
     }, 0);
   }
@@ -1233,31 +1236,27 @@ html, body {
   (function() {
     const carousel = $('repsCarousel');
     let touchStartX = 0;
-    let isScrolling = false;
+    let touchStartTime = 0;
     
     carousel.addEventListener('touchstart', (e) => {
       touchStartX = e.touches[0].clientX;
-      isScrolling = false;
-    }, { passive: true });
-    
-    carousel.addEventListener('touchmove', (e) => {
-      const diff = Math.abs(e.touches[0].clientX - touchStartX);
-      if (diff > 10) isScrolling = true;
+      touchStartTime = Date.now();
     }, { passive: true });
     
     carousel.addEventListener('touchend', (e) => {
-      if (isScrolling) return;
-      
       const touchEndX = e.changedTouches[0].clientX;
+      const touchDuration = Date.now() - touchStartTime;
       const diff = touchStartX - touchEndX;
-      const minSwipe = 30;
+      const minSwipe = 25;
+      const maxDuration = 500;
       
-      if (Math.abs(diff) < minSwipe) return;
+      // Only register swipe if: sufficient distance AND not too slow
+      if (Math.abs(diff) < minSwipe || touchDuration > maxDuration) return;
       
       const current = parseInt(carousel.dataset.value, 10) || 10;
       let next = current;
       
-      // Swipe links = next number, swipe rechts = previous number
+      // Swipe links (←) = next number, swipe rechts (→) = previous number
       if (diff > minSwipe) {
         next = Math.min(20, current + 1);
       } else if (diff < -minSwipe) {
