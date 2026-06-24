@@ -403,18 +403,16 @@ html, body {
 }
 .pill.rpe.active { background: rgba(240,136,62,0.15); border-color: rgba(240,136,62,0.35); color: #f0883e; }
 
-/* Reps carousel - picker wheel style */
+/* Reps rolling wheel picker - horizontal */
 #repsCarouselWrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin: 0 -60px;
-  padding: 20px 60px;
   position: relative;
   background: rgba(240,136,62,0.02);
   border: 1px solid rgba(240,136,62,0.08);
   border-radius: 16px;
+  padding: 20px 0;
   overflow: hidden;
 }
 #repsCarouselWrap::before,
@@ -426,15 +424,23 @@ html, body {
   letter-spacing: 12px;
   font-weight: 700;
   pointer-events: none;
+  z-index: 10;
 }
 #repsCarouselWrap::before { left: 16px; }
 #repsCarouselWrap::after { right: 16px; }
 
 #repsCarousel {
   display: flex;
-  gap: 12px;
+  flex-direction: row;
+  gap: 8px;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  position: relative;
+  padding: 0 60px;
+  margin: 0 -60px;
   user-select: none;
   -webkit-user-select: none;
   touch-action: pan-y;
@@ -442,6 +448,8 @@ html, body {
 
 .rep-button {
   flex-shrink: 0;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -449,14 +457,14 @@ html, body {
   background: transparent;
   color: rgba(255,255,255,0.35);
   font-family: inherit;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   transition: all 0.15s ease-out;
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
-  opacity: 0.5;
-  transform: scale(0.75);
+  opacity: 0.4;
+  transform: scale(0.8);
 }
 
 .rep-button.active {
@@ -464,18 +472,13 @@ html, body {
   height: 64px;
   background: linear-gradient(135deg, rgba(240,136,62,0.15), rgba(240,136,62,0.05));
   border: 2px solid rgba(240,136,62,0.5);
-  border-radius: 16px;
+  border-radius: 12px;
   color: #f0883e;
   font-size: 28px;
   font-weight: 700;
   opacity: 1;
   transform: scale(1);
   box-shadow: 0 0 20px rgba(240,136,62,0.25), inset 0 1px 0 rgba(255,255,255,0.1);
-}
-
-.rep-button:not(.active) {
-  width: 44px;
-  height: 44px;
 }
 
 /* Log button */
@@ -797,7 +800,7 @@ html, body {
       </div>
     </div>
 
-    <div class="field-label">Reps — swipe om te kiezen</div>
+    <div class="field-label">Reps — swipe links/rechts</div>
     <div id="repsCarouselWrap">
       <div id="repsCarousel"></div>
     </div>
@@ -1203,29 +1206,48 @@ html, body {
   }
   function renderRepsRow() {
     const carousel = $('repsCarousel');
-    const lo = 8, hi = 12;
+    const lo = 1, hi = 20;
     const prev = parseInt(carousel.dataset.value, 10);
     const active = (prev >= lo && prev <= hi) ? prev : 10;
     
-    // Always render all 5 items
     let html = '';
     for (let i = lo; i <= hi; i++) {
       html += '<button class="rep-button' + (i===active?' active':'') + '" data-v="' + i + '" type="button">' + i + '</button>';
     }
     carousel.innerHTML = html;
     carousel.dataset.value = String(active);
+    
+    // Scroll active into view
+    setTimeout(() => {
+      const activeBtn = carousel.querySelector('.rep-button.active');
+      if (activeBtn) {
+        const carouselRect = carousel.getBoundingClientRect();
+        const btnRect = activeBtn.getBoundingClientRect();
+        const scrollOffset = btnRect.top - carouselRect.top - carouselRect.height / 2 + btnRect.height / 2;
+        carousel.scrollTop += scrollOffset;
+      }
+    }, 0);
   }
   
-  // Swipe handler for reps carousel
+  // Rolling wheel swipe handler - horizontal
   (function() {
     const carousel = $('repsCarousel');
     let touchStartX = 0;
+    let isScrolling = false;
     
     carousel.addEventListener('touchstart', (e) => {
       touchStartX = e.touches[0].clientX;
+      isScrolling = false;
+    }, { passive: true });
+    
+    carousel.addEventListener('touchmove', (e) => {
+      const diff = Math.abs(e.touches[0].clientX - touchStartX);
+      if (diff > 10) isScrolling = true;
     }, { passive: true });
     
     carousel.addEventListener('touchend', (e) => {
+      if (isScrolling) return;
+      
       const touchEndX = e.changedTouches[0].clientX;
       const diff = touchStartX - touchEndX;
       const minSwipe = 30;
@@ -1235,16 +1257,21 @@ html, body {
       const current = parseInt(carousel.dataset.value, 10) || 10;
       let next = current;
       
+      // Swipe links = next number, swipe rechts = previous number
       if (diff > minSwipe) {
-        next = Math.min(12, current + 1);
+        next = Math.min(20, current + 1);
       } else if (diff < -minSwipe) {
-        next = Math.max(8, current - 1);
+        next = Math.max(1, current - 1);
       }
       
       if (next !== current) {
         carousel.querySelectorAll('.rep-button').forEach(x => x.classList.remove('active'));
-        carousel.querySelector('[data-v="' + next + '"]').classList.add('active');
-        carousel.dataset.value = String(next);
+        const nextBtn = carousel.querySelector('[data-v="' + next + '"]');
+        if (nextBtn) {
+          nextBtn.classList.add('active');
+          carousel.dataset.value = String(next);
+          nextBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
       }
     }, { passive: true });
   })();
