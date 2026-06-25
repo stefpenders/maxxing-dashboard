@@ -255,7 +255,7 @@ html,body{margin:0;padding:0;background:radial-gradient(ellipse 80% 60% at 50% 0
 
     <div class="modal-actions">
       <button class="btn-danger" onclick="resetToday()">Reset vandaag</button>
-      <button class="btn-sec" onclick="closeSettings()">Sluiten</button>
+      <button class="btn-sec" onclick="saveSettings()" style="background:#f0883e;color:#0a0a0b;font-weight:700">Opslaan</button>
     </div>
   </div>
 </div>
@@ -983,6 +983,16 @@ function renderPlannedSettingsPreview() {
   }).join('') + (state.planned.length > 3 ? '<div style="font-size:11px;color:var(--t4);padding:4px 0">+' + (state.planned.length - 3) + ' meer</div>' : '');
 }
 
+function saveSettings() {
+  // Ensure all data is saved
+  save();
+  console.log('Settings saved:', state);
+  // Close modal
+  document.getElementById('setModal').classList.remove('show');
+  // Refresh UI to show changes
+  render();
+}
+
 function closeSettings() {
   document.getElementById('setModal').classList.remove('show');
 }
@@ -1021,15 +1031,24 @@ function deleteCat(i) {
   state.categories.splice(i, 1);
   state.recurring = state.recurring.filter(r => r.cat !== c.id);
   Object.values(state.days).forEach(d => { if (d && d.tasks) d.tasks = d.tasks.filter(t => t.cat !== c.id); });
-  save(); renderCatSettings(); renderRecSettings(); render();
+  save();
+  console.log('Category deleted and saved:', c.id);
+  renderCatSettings(); 
+  renderRecSettings(); 
+  render();
 }
 
 function addCat() {
   const name = (prompt('Naam van de nieuwe categorie:') || '').trim();
   if (!name) return;
   const i = state.categories.length;
-  state.categories.push({ id: 'c_' + Date.now(), name, color: COLORS[i % COLORS.length] });
-  save(); renderCatSettings(); renderRecSettings(); render();
+  const newCat = { id: 'c_' + Date.now(), name, color: COLORS[i % COLORS.length] };
+  state.categories.push(newCat);
+  save();
+  console.log('Category added and saved:', newCat);
+  renderCatSettings(); 
+  renderRecSettings(); 
+  render();
 }
 
 function renderRecSettings() {
@@ -1058,7 +1077,10 @@ function deleteRec(i) {
       state.days[dateKey].tasks = state.days[dateKey].tasks.filter(t => t.recurringId !== rec.id);
     }
   });
-  save(); renderRecSettings(); render();
+  save();
+  console.log('Recurring task deleted and saved:', rec.id);
+  renderRecSettings(); 
+  render();
 }
 
 function addRec() {
@@ -1077,7 +1099,10 @@ function addRec() {
       if (!already) state.days[dateKey].tasks.push({ id: uid(), cat: rec.cat, name: rec.name, note: rec.note, done: false, recurringId: rec.id });
     }
   });
-  save(); renderRecSettings(); render();
+  save();
+  console.log('Recurring task added and saved:', rec);
+  renderRecSettings(); 
+  render();
 }
 
 function resetToday() {

@@ -1640,7 +1640,19 @@ html, body {
     const dur = Date.now() - state.session.startedAt;
     const durationMin = Math.max(1, Math.round(dur / 60000));
     const dayObj = state.days.find(d => d.id === state.filterDay);
-    state.sessions.push({
+    
+    // Show end modal with stats
+    const durStr = durationMin >= 60 
+      ? Math.floor(durationMin/60) + 'u ' + (durationMin%60) + 'm'
+      : durationMin + ' min';
+    $('endStats_duration').textContent = durStr;
+    $('endStats_sets').textContent = (state.session.setCount || 0) + ' sets';
+    $('endStats_day').textContent = dayObj ? dayObj.name : 'Training';
+    
+    $('sessionEndModal').style.display = 'flex';
+    
+    // Store session data for confirmation
+    const sessionData = {
       date: new Date().toISOString(),
       startedAt: state.session.startedAt,
       endedAt: Date.now(),
@@ -1648,10 +1660,25 @@ html, body {
       sets: state.session.setCount || 0,
       dayId: state.filterDay,
       dayName: dayObj ? dayObj.name : ''
-    });
-    state.session = null;
-    save(); renderAll();
-    alert('Training afgerond — ' + (durationMin >= 60 ? Math.floor(durationMin/60)+'u '+(durationMin%60)+'m' : durationMin + ' min') + ' bewaard.');
+    };
+    
+    // Confirm button
+    const confirmHandler = () => {
+      state.sessions.push(sessionData);
+      state.session = null;
+      save();
+      $('sessionEndModal').style.display = 'none';
+      renderAll();
+      console.log('Training saved:', sessionData);
+    };
+    
+    // Cancel button
+    const cancelHandler = () => {
+      $('sessionEndModal').style.display = 'none';
+    };
+    
+    $('endConfirmBtn').onclick = confirmHandler;
+    $('endCancelBtn').onclick = cancelHandler;
   });
   // tick the live session time every 30s
   setInterval(() => { if (state.session) { renderSession(); renderWoProgress(); } }, 30000);
@@ -2207,5 +2234,18 @@ html, body {
 </script>
 
 </body>
+<!-- Training end confirmation modal -->
+<div class="modal-bg" id="sessionEndModal" style="display:none;z-index:1000;background:rgba(0,0,0,0.9)">
+  <div style="background:#0a0a0b;border:1px solid rgba(240,136,62,0.3);border-radius:16px;padding:32px;max-width:340px;text-align:center">
+    <div style="font-size:14px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px">Training afgerond</div>
+    <div style="font-size:48px;font-weight:700;color:#f0883e;margin-bottom:8px" id="endStats_duration">0 min</div>
+    <div style="font-size:13px;color:var(--text-2);margin-bottom:32px;line-height:1.8">
+      <div id="endStats_sets">0 sets</div>
+      <div id="endStats_day" style="font-size:11px;color:var(--text-3);margin-top:8px">—</div>
+    </div>
+    <button id="endConfirmBtn" style="width:100%;padding:16px;background:#f0883e;color:#0a0a0b;border:none;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer;margin-bottom:10px;transition:all 0.2s">Opslaan</button>
+    <button id="endCancelBtn" style="width:100%;padding:16px;background:transparent;color:var(--text-2);border:1px solid var(--border);border-radius:12px;font-weight:600;font-size:16px;cursor:pointer;transition:all 0.2s">Annuleren</button>
+  </div>
+</div>
 </html>
 

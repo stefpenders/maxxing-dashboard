@@ -111,7 +111,8 @@
   function schedulePush() {
     if (suppress) return;
     clearTimeout(pushTimer);
-    pushTimer = setTimeout(push, 800);
+    // Push immediately instead of waiting 800ms - critical for deletes
+    pushTimer = setTimeout(push, 100);
   }
 
   // Hook localStorage
