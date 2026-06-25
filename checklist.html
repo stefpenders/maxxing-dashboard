@@ -307,7 +307,7 @@ function loadState() {
 function save() {
   state._savedAt = Date.now();
   localStorage.setItem(LS, JSON.stringify(state));
-  sbPush();
+  // sync.js automatically syncs via localStorage hook - no need for sbPush()
 }
 
 let state = null; // loaded after Supabase pull in boot()
