@@ -1491,9 +1491,12 @@ html, body {
     }).join('');
     wrap.querySelectorAll('.hist-del').forEach(b => {
       b.addEventListener('click', () => {
-        if (!confirm('Deze sessie verwijderen?')) return;
-        state.sessions.splice(parseInt(b.dataset.sidx,10), 1);
-        save(); renderSessions();
+        const sidx = parseInt(b.dataset.sidx,10);
+        showConfirmModal('Deze sessie verwijderen?', (ok) => {
+          if (!ok) return;
+          state.sessions.splice(sidx, 1);
+          save(); renderSessions();
+        });
       });
     });
   }
@@ -1541,11 +1544,14 @@ html, body {
     wrap.querySelectorAll('.hist-del').forEach(b => {
       b.addEventListener('click', e => {
         e.stopPropagation();
-        if (!confirm('Deze set verwijderen?')) return;
-        const arr = state.logs[state.currentEx] || [];
-        arr.splice(parseInt(b.dataset.idx,10), 1);
-        if (!arr.length) delete state.logs[state.currentEx]; else state.logs[state.currentEx] = arr;
-        editingSetIdx = null; save(); renderAll();
+        const idx = parseInt(b.dataset.idx,10);
+        showConfirmModal('Deze set verwijderen?', (ok) => {
+          if (!ok) return;
+          const arr = state.logs[state.currentEx] || [];
+          arr.splice(idx, 1);
+          if (!arr.length) delete state.logs[state.currentEx]; else state.logs[state.currentEx] = arr;
+          editingSetIdx = null; save(); renderAll();
+        });
       });
     });
     // cancel edit
@@ -1620,10 +1626,10 @@ html, body {
   $('logBtn').addEventListener('click', () => {
     const ex = getCurrentEx(); if(!ex) return;
     const reps = parseInt($('repsCarousel').dataset.value,10) || 0;
-    if (reps <= 0) { alert('Kies een aantal reps.'); return; }
+    if (reps <= 0) { showAlertModal('Kies een aantal reps.'); return; }
     const rpe = parseInt($('rpeRow').dataset.value,10) || null;
     const w = ex.bw ? 0 : (parseFloat($('wInput').value)||0);
-    if (!ex.bw && w <= 0) { alert('Vul een gewicht in.'); return; }
+    if (!ex.bw && w <= 0) { showAlertModal('Vul een gewicht in.'); return; }
     // start a session on the first set of the day
     if (!state.session) state.session = { startedAt: Date.now(), setCount: 0 };
     state.session.setCount = (state.session.setCount || 0) + 1;
@@ -1834,8 +1840,8 @@ html, body {
   $('exCancel').addEventListener('click', () => $('exModalBg').classList.remove('show'));
   $('exSave').addEventListener('click', () => {
     const name = $('exName').value.trim();
-    if (!name) { alert('Naam is verplicht.'); return; }
-    if (!modalDay) { alert('Kies een dag.'); return; }
+    if (!name) { showAlertModal('Naam is verplicht.'); return; }
+    if (!modalDay) { showAlertModal('Kies een dag.'); return; }
     const bw = $('exBw').checked;
     const sw = parseFloat($('exStartWeight').value);
     const data = {
@@ -1863,18 +1869,20 @@ html, body {
     catch (e) {
       // roll back the photo if it pushed us over quota
       if (typeof pendingPhoto === 'string' && target) { delete target.photo; }
-      alert('Opslaan mislukt — de foto is waarschijnlijk te groot. Probeer een kleinere foto of laat de foto weg.');
+      showAlertModal('Opslaan mislukt — de foto is waarschijnlijk te groot. Probeer een kleinere foto of laat de foto weg.');
       save();
     }
     $('exModalBg').classList.remove('show'); renderAll();
   });
   $('exDelete').addEventListener('click', () => {
     if (!editingExId) return;
-    if (!confirm('Deze oefening en al zijn sets verwijderen?')) return;
-    state.exercises = state.exercises.filter(e => e.id !== editingExId);
-    delete state.logs[editingExId];
-    if (state.currentEx === editingExId) state.currentEx = null;
-    editingExId = null; save(); $('exModalBg').classList.remove('show'); renderAll();
+    showConfirmModal('Deze oefening en al zijn sets verwijderen?', (ok) => {
+      if (!ok) return;
+      state.exercises = state.exercises.filter(e => e.id !== editingExId);
+      delete state.logs[editingExId];
+      if (state.currentEx === editingExId) state.currentEx = null;
+      editingExId = null; save(); $('exModalBg').classList.remove('show'); renderAll();
+    });
   });
 
   // ---------- settings ----------
@@ -1896,7 +1904,7 @@ html, body {
     });
     wrap.querySelectorAll('.set-day-del').forEach(b => {
       b.addEventListener('click', () => {
-        if (state.days.length <= 1) { alert('Je hebt minstens één dag nodig.'); return; }
+        if (state.days.length <= 1) { showAlertModal('Je hebt minstens één dag nodig.'); return; }
         const i = parseInt(b.dataset.i, 10);
         const day = state.days[i];
         const exCount = state.exercises.filter(e => e.day === day.id).length;
@@ -1921,9 +1929,11 @@ html, body {
   $('setClose').addEventListener('click', () => $('setModalBg').classList.remove('show'));
   $('setModalBg').addEventListener('click', e => { if (e.target === $('setModalBg')) $('setModalBg').classList.remove('show'); });
   $('resetBtn').addEventListener('click', () => {
-    if (!confirm('Alle trainingsdata wissen? Dit kan niet ongedaan worden gemaakt.')) return;
-    localStorage.removeItem(LS_KEY); state = load();
-    $('setModalBg').classList.remove('show'); renderAll();
+    showConfirmModal('Alle trainingsdata wissen? Dit kan niet ongedaan worden gemaakt.', (ok) => {
+      if (!ok) return;
+      localStorage.removeItem(LS_KEY); state = load();
+      $('setModalBg').classList.remove('show'); renderAll();
+    });
   });
 
   // close modals on backdrop
@@ -2156,7 +2166,7 @@ html, body {
         if(el&&el.value){entry[m.id]=parseFloat(el.value);any=true;el.value='';}
       }
     });
-    if(!any){alert('Vul minstens één meting in.');return;}
+    if(!any){showAlertModal('Vul minstens één meting in.');return;}
     data.entries.push(entry);
     saveM(data);
     renderMatenTab();
@@ -2211,11 +2221,13 @@ html, body {
     const data=loadM();
     if(!Array.isArray(data.metrics))return;
     const m=data.metrics[i];
-    if(!confirm('Meting "'+m.name+'" verwijderen?'))return;
-    data.metrics.splice(i,1);
-    saveM(data);
-    renderMetricList();
-    renderMatenTab();
+    showConfirmModal('Meting "'+m.name+'" verwijderen?', (ok) => {
+      if(!ok)return;
+      data.metrics.splice(i,1);
+      saveM(data);
+      renderMetricList();
+      renderMatenTab();
+    });
   };
 
   window.addMetric=function(){
@@ -2233,7 +2245,69 @@ html, body {
 })();
 </script>
 
-</body>
+<!-- Confirm/Alert modals -->
+<div class="modal-bg" id="confirmModal" style="display:none;z-index:2000;background:rgba(0,0,0,0.9)">
+  <div style="background:#0a0a0b;border:1px solid rgba(240,136,62,0.3);border-radius:16px;padding:28px;max-width:300px;text-align:center">
+    <p id="confirmMsg" style="margin-bottom:20px;font-size:15px;line-height:1.6;color:var(--text-1)"></p>
+    <div style="display:flex;gap:10px">
+      <button id="confirmCancel" style="flex:1;padding:12px;background:transparent;color:var(--text-2);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-weight:600">Annuleren</button>
+      <button id="confirmOK" style="flex:1;padding:12px;background:#ff4444;color:white;font-weight:700;border:none;border-radius:8px;cursor:pointer">Verwijderen</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="alertModal" style="display:none;z-index:2000;background:rgba(0,0,0,0.9)">
+  <div style="background:#0a0a0b;border:1px solid rgba(240,136,62,0.3);border-radius:16px;padding:28px;max-width:300px;text-align:center">
+    <p id="alertMsg" style="margin-bottom:20px;font-size:15px;line-height:1.6;color:var(--text-1)"></p>
+    <button id="alertOK" style="width:100%;padding:12px;background:#f0883e;color:#0a0a0b;border:none;border-radius:8px;cursor:pointer;font-weight:700">OK</button>
+  </div>
+</div>
+
+<script>
+// Custom confirm/alert system (replaces browser popups)
+let confirmCallback = null;
+
+function showConfirmModal(msg, callback) {
+  document.getElementById('confirmMsg').textContent = msg;
+  confirmCallback = callback;
+  document.getElementById('confirmModal').style.display = 'flex';
+}
+
+function showAlertModal(msg) {
+  document.getElementById('alertMsg').textContent = msg;
+  document.getElementById('alertModal').style.display = 'flex';
+}
+
+if (document.getElementById('confirmOK')) {
+  document.getElementById('confirmOK').addEventListener('click', () => {
+    document.getElementById('confirmModal').style.display = 'none';
+    if (confirmCallback) { confirmCallback(true); confirmCallback = null; }
+  });
+
+  document.getElementById('confirmCancel').addEventListener('click', () => {
+    document.getElementById('confirmModal').style.display = 'none';
+    if (confirmCallback) { confirmCallback(false); confirmCallback = null; }
+  });
+
+  document.getElementById('alertOK').addEventListener('click', () => {
+    document.getElementById('alertModal').style.display = 'none';
+  });
+
+  // Close on background click
+  document.getElementById('confirmModal').addEventListener('click', e => {
+    if (e.target.id === 'confirmModal') {
+      document.getElementById('confirmModal').style.display = 'none';
+      if (confirmCallback) { confirmCallback(false); confirmCallback = null; }
+    }
+  });
+
+  document.getElementById('alertModal').addEventListener('click', e => {
+    if (e.target.id === 'alertModal') {
+      document.getElementById('alertModal').style.display = 'none';
+    }
+  });
+}
+</script>
 <!-- Training end confirmation modal -->
 <div class="modal-bg" id="sessionEndModal" style="display:none;z-index:1000;background:rgba(0,0,0,0.9)">
   <div style="background:#0a0a0b;border:1px solid rgba(240,136,62,0.3);border-radius:16px;padding:32px;max-width:340px;text-align:center">

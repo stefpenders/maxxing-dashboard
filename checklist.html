@@ -236,7 +236,7 @@ html,body{margin:0;padding:0;background:radial-gradient(ellipse 80% 60% at 50% 0
 
     <h4>Water doel</h4>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0">
-      <span style="font-size:14px;color:var(--t2);flex:1">Dagelijks doel</span>
+      <span style="font-size:14px;color:var(--text-2);flex:1">Dagelijks doel</span>
       <button class="wbtn" onclick="adjustWaterGoal(-0.5)" style="width:36px;height:36px;font-size:18px">−</button>
       <span id="waterGoalDisplay" style="font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;min-width:48px;text-align:center">3L</span>
       <button class="wbtn" onclick="adjustWaterGoal(0.5)" style="width:36px;height:36px;font-size:18px">+</button>
@@ -244,15 +244,32 @@ html,body{margin:0;padding:0;background:radial-gradient(ellipse 80% 60% at 50% 0
 
     <h4>Categorieën</h4>
     <div id="catList"></div>
-    <button class="add-more" onclick="addCat()">+ Categorie toevoegen</button>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input type="text" id="newCatInput" placeholder="Naam..." style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-1);font-size:14px">
+      <button class="add-more" onclick="inlineAddCat()" style="margin:0">Toevoegen</button>
+    </div>
 
     <h4>Terugkerende taken dagelijks</h4>
     <div id="recList"></div>
-    <button class="add-more" onclick="addRec()">+ Dagelijkse taak toevoegen</button>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+      <input type="text" id="newRecInput" placeholder="Taak naam..." style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-1);font-size:14px">
+      <select id="newRecCatSelect" style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-1);font-size:14px">
+        <option value="">-- Categorie selecteren --</option>
+      </select>
+      <input type="text" id="newRecNote" placeholder="Opmerking (optioneel)" style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-1);font-size:14px">
+      <button class="add-more" onclick="inlineAddRec()" style="margin:0">Toevoegen</button>
+    </div>
 
     <h4>Terugkerende taken interval</h4>
     <div id="recIntervalList"></div>
-    <button class="add-more" onclick="addRecInterval()">+ Interval taak toevoegen</button>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+      <input type="text" id="newRecIntInput" placeholder="Taak naam..." style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-1);font-size:14px">
+      <select id="newRecIntCatSelect" style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-1);font-size:14px">
+        <option value="">-- Categorie selecteren --</option>
+      </select>
+      <input type="number" id="newRecIntDays" placeholder="Interval (dagen)" min="1" style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-1);font-size:14px">
+      <button class="add-more" onclick="inlineAddRecInterval()" style="margin:0">Toevoegen</button>
+    </div>
 
     <div class="modal-actions">
       <button class="btn-danger" onclick="resetToday()">Reset vandaag</button>
@@ -261,10 +278,85 @@ html,body{margin:0;padding:0;background:radial-gradient(ellipse 80% 60% at 50% 0
   </div>
 </div>
 
+<div class="modal-bg" id="confirmModal" style="display:none;z-index:2000">
+  <div class="modal" style="max-width:320px">
+    <p id="confirmMsg" style="margin-bottom:20px;font-size:15px;line-height:1.6"></p>
+    <div style="display:flex;gap:10px">
+      <button id="confirmCancel" class="btn-sec" style="flex:1;padding:12px;cursor:pointer">Annuleren</button>
+      <button id="confirmOK" class="btn-danger" style="flex:1;padding:12px;background:#ff4444;color:white;font-weight:700;border:none;border-radius:8px;cursor:pointer">Verwijderen</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="alertModal" style="display:none;z-index:2000">
+  <div class="modal" style="max-width:320px">
+    <p id="alertMsg" style="margin-bottom:20px;font-size:15px;line-height:1.6"></p>
+    <button id="alertOK" class="btn-sec" style="width:100%;padding:12px;cursor:pointer;font-weight:700">OK</button>
+  </div>
+</div>
+
 <script>
-// ============================================================
-// CONSTANTS
-// ============================================================
+// Custom confirm/alert system (replaces browser popups)
+let confirmCallback = null;
+let confirming = false;
+
+function showConfirmModal(msg, callback) {
+  document.getElementById('confirmMsg').textContent = msg;
+  confirmCallback = callback;
+  confirming = true;
+  document.getElementById('confirmModal').style.display = 'flex';
+}
+
+function showAlertModal(msg) {
+  document.getElementById('alertMsg').textContent = msg;
+  document.getElementById('alertModal').style.display = 'flex';
+}
+
+// OVERRIDE browser confirm/alert
+window.confirm = function(msg) {
+  showConfirmModal(msg, (result) => {
+    window.__confirmResult = result;
+  });
+  // This is synchronous-like but doesn't block
+  // We need to handle this differently - use callbacks instead!
+  return true; // Fallback
+};
+
+window.alert = function(msg) {
+  showAlertModal(msg);
+};
+
+document.getElementById('confirmOK').addEventListener('click', () => {
+  document.getElementById('confirmModal').style.display = 'none';
+  if (confirmCallback) { confirmCallback(true); confirmCallback = null; }
+  confirming = false;
+});
+
+document.getElementById('confirmCancel').addEventListener('click', () => {
+  document.getElementById('confirmModal').style.display = 'none';
+  if (confirmCallback) { confirmCallback(false); confirmCallback = null; }
+  confirming = false;
+});
+
+document.getElementById('alertOK').addEventListener('click', () => {
+  document.getElementById('alertModal').style.display = 'none';
+});
+
+// Close on background click
+document.getElementById('confirmModal').addEventListener('click', e => {
+  if (e.target.id === 'confirmModal') {
+    document.getElementById('confirmModal').style.display = 'none';
+    if (confirmCallback) { confirmCallback(false); confirmCallback = null; }
+    confirming = false;
+  }
+});
+
+document.getElementById('alertModal').addEventListener('click', e => {
+  if (e.target.id === 'alertModal') {
+    document.getElementById('alertModal').style.display = 'none';
+  }
+});
+</script>
 const LS = 'maxx_checklist_v1';
 const RESET_HOUR = CONFIG.resetHour || 5;
 const COLORS = ['#7DD3FC','#6ee7b7','#fbbf24','#B794F4','#ff8a8a','#f0883e','#5eead4','#a3e635','#f472b6','#60a5fa'];
@@ -446,35 +538,48 @@ function renderRecIntervalSettings() {
 
 function deleteRecInterval(i) {
   const r = state.recurringInterval[i];
-  if (!confirm('Interval taak "' + r.name + '" verwijderen?')) return;
-  state.recurringInterval.splice(i, 1);
-  [activeDate(), tomorrowDate()].forEach(dk => {
-    if (state.days[dk]) state.days[dk].tasks = state.days[dk].tasks.filter(t => t.intervalRecId !== r.id);
+  showConfirmModal('Interval taak "' + r.name + '" verwijderen?', (ok) => {
+    if (!ok) return;
+    state.recurringInterval.splice(i, 1);
+    [activeDate(), tomorrowDate()].forEach(dk => {
+      if (state.days[dk]) state.days[dk].tasks = state.days[dk].tasks.filter(t => t.intervalRecId !== r.id);
+    });
+    save(); 
+    renderRecIntervalSettings();
+    render();
   });
-  save(); renderRecIntervalSettings();
 }
 
-function addRecInterval() {
-  const name = (prompt('Naam van de interval taak:') || '').trim();
-  if (!name) return;
-  const intervalStr = prompt('Elke hoeveel dagen? (bijv. 14 voor elke 2 weken):', '14');
-  const interval = parseInt(intervalStr, 10);
-  if (isNaN(interval) || interval < 1) { alert('Ongeldig interval.'); return; }
-  const startDate = prompt('Startdatum (JJJJ-MM-DD):', dateStr(new Date()));
-  if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) { alert('Ongeldige datum.'); return; }
-  const catList = state.categories.map((c, i) => (i+1) + '. ' + c.name).join('\n');
-  const pick = prompt('In welke categorie?\n\n' + catList + '\n\nTyp het nummer:', '1');
-  const idx = parseInt(pick, 10) - 1;
-  if (isNaN(idx) || idx < 0 || idx >= state.categories.length) return;
-  const r = { id: 'ri_' + Date.now(), name, cat: state.categories[idx].id, interval, startDate };
+function inlineAddRecInterval() {
+  const name = document.getElementById('newRecIntInput').value.trim();
+  const catId = document.getElementById('newRecIntCatSelect').value;
+  const interval = parseInt(document.getElementById('newRecIntDays').value, 10);
+  
+  if (!name) { showAlertModal('Vul taak naam in'); return; }
+  if (!catId) { showAlertModal('Selecteer een categorie'); return; }
+  if (isNaN(interval) || interval < 1) { showAlertModal('Voer geldig interval in (dagen)'); return; }
+  
+  const startDate = dateStr(new Date());
+  const r = { id: 'ri_' + Date.now(), name, cat: catId, interval, startDate };
   state.recurringInterval.push(r);
+  
   [activeDate(), tomorrowDate()].forEach(dk => {
     if (state.days[dk]) {
       const tasks = state.days[dk].tasks;
       injectIntervalRecurring(dk, tasks);
     }
   });
-  save(); renderRecIntervalSettings();
+  
+  document.getElementById('newRecIntInput').value = '';
+  document.getElementById('newRecIntCatSelect').value = '';
+  document.getElementById('newRecIntDays').value = '';
+  
+  renderRecIntervalSettings();
+  console.log('Interval task added inline:', r);
+}
+
+function addRecInterval() {
+  // DEPRECATED - use inlineAddRecInterval instead
 }
 let agView = 'month';
 let agCursor = new Date();
@@ -683,7 +788,7 @@ function agDurTypeChange() {
 
 function agSaveAppointment() {
   const name = (document.getElementById('agName').value || '').trim();
-  if (!name) { alert('Geef een naam op.'); return; }
+  if (!name) { showAlertModal('Geef een naam op.'); return; }
 
   // Time from scroll pickers
   const hour = document.getElementById('agHour') ? document.getElementById('agHour').value : '';
@@ -769,7 +874,7 @@ function addPlannedOnDate(dk) {
 function agEditItem(id) {
   const p = state.planned.find(x => x.id === id);
   if (!p) return;
-  if (p.type === 'interval') { alert('Herhalende taken kun je aanpassen via Instellingen.'); return; }
+  if (p.type === 'interval') { showAlertModal('Herhalende taken kun je aanpassen via Instellingen.'); return; }
   agMoveItem(id);
 }
 
@@ -1011,6 +1116,17 @@ function renderCatSettings() {
     + '<button class="set-del" onclick="deleteCat(' + i + ')">×</button>'
     + '</div>'
   ).join('');
+  updateCategorySelects();
+}
+
+function updateCategorySelects() {
+  // Update all category select dropdowns
+  ['newRecCatSelect', 'newRecIntCatSelect'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">-- Categorie selecteren --</option>' + 
+      state.categories.map(c => '<option value="' + c.id + '">' + esc(c.name) + '</option>').join('');
+  });
 }
 
 function cycleCatIcon(i) {
@@ -1026,30 +1142,34 @@ function cycleCatColor(i) {
 }
 
 function deleteCat(i) {
-  if (state.categories.length <= 1) { alert('Je hebt minstens één categorie nodig.'); return; }
+  if (state.categories.length <= 1) { showAlertModal('Je hebt minstens één categorie nodig.'); return; }
   const c = state.categories[i];
-  if (!confirm('Categorie "' + c.name + '" verwijderen?')) return;
-  state.categories.splice(i, 1);
-  state.recurring = state.recurring.filter(r => r.cat !== c.id);
-  Object.values(state.days).forEach(d => { if (d && d.tasks) d.tasks = d.tasks.filter(t => t.cat !== c.id); });
-  save();
-  console.log('Category deleted and saved:', c.id);
-  renderCatSettings(); 
-  renderRecSettings(); 
-  render();
+  showConfirmModal('Categorie "' + c.name + '" verwijderen?', (ok) => {
+    if (!ok) return;
+    state.categories.splice(i, 1);
+    state.recurring = state.recurring.filter(r => r.cat !== c.id);
+    Object.values(state.days).forEach(d => { if (d && d.tasks) d.tasks = d.tasks.filter(t => t.cat !== c.id); });
+    save();
+    console.log('Category deleted and saved:', c.id);
+    renderCatSettings(); 
+    renderRecSettings(); 
+    render();
+  });
 }
 
-function addCat() {
-  const name = (prompt('Naam van de nieuwe categorie:') || '').trim();
-  if (!name) return;
+function inlineAddCat() {
+  const name = document.getElementById('newCatInput').value.trim();
+  if (!name) { showAlertModal('Vul categorie naam in'); return; }
   const i = state.categories.length;
   const newCat = { id: 'c_' + Date.now(), name, color: COLORS[i % COLORS.length] };
   state.categories.push(newCat);
-  save();
-  console.log('Category added and saved:', newCat);
+  document.getElementById('newCatInput').value = '';
   renderCatSettings(); 
-  renderRecSettings(); 
-  render();
+  console.log('Category added inline:', newCat);
+}
+
+function addCat() {
+  // DEPRECATED - use inlineAddCat instead
 }
 
 function renderRecSettings() {
@@ -1069,48 +1189,63 @@ function renderRecSettings() {
 }
 
 function deleteRec(i) {
-  if (!confirm('Terugkerende taak "' + state.recurring[i].name + '" permanent verwijderen?')) return;
   const rec = state.recurring[i];
-  state.recurring.splice(i, 1);
-  // Remove from today and tomorrow if they came from this recurring task
-  [activeDate(), tomorrowDate()].forEach(dateKey => {
-    if (state.days[dateKey]) {
-      state.days[dateKey].tasks = state.days[dateKey].tasks.filter(t => t.recurringId !== rec.id);
-    }
+  showConfirmModal('Terugkerende taak "' + rec.name + '" permanent verwijderen?', (ok) => {
+    if (!ok) return;
+    state.recurring.splice(i, 1);
+    // Remove from today and tomorrow if they came from this recurring task
+    [activeDate(), tomorrowDate()].forEach(dateKey => {
+      if (state.days[dateKey]) {
+        state.days[dateKey].tasks = state.days[dateKey].tasks.filter(t => t.recurringId !== rec.id);
+      }
+    });
+    save();
+    console.log('Recurring task deleted and saved:', rec.id);
+    renderRecSettings(); 
+    render();
   });
-  save();
-  console.log('Recurring task deleted and saved:', rec.id);
-  renderRecSettings(); 
-  render();
 }
 
-function addRec() {
-  const name = (prompt('Naam van de terugkerende taak:') || '').trim();
-  if (!name) return;
-  const note = (prompt('Opmerking (optioneel):') || '').trim();
-  const catList = state.categories.map((c, i) => (i + 1) + '. ' + c.name).join('\n');
-  const pick = prompt('In welke categorie?\n\n' + catList + '\n\nTyp het nummer:', '1');
-  const idx = parseInt(pick, 10) - 1;
-  if (isNaN(idx) || idx < 0 || idx >= state.categories.length) return;
-  const rec = { id: 'r_' + Date.now(), cat: state.categories[idx].id, name, note: note || null };
+function inlineAddRec() {
+  const name = document.getElementById('newRecInput').value.trim();
+  const catId = document.getElementById('newRecCatSelect').value;
+  const note = document.getElementById('newRecNote').value.trim();
+  
+  if (!name) { showAlertModal('Vul taak naam in'); return; }
+  if (!catId) { showAlertModal('Selecteer een categorie'); return; }
+  
+  const rec = { id: 'r_' + Date.now(), cat: catId, name, note: note || null };
   state.recurring.push(rec);
+  
+  // Add to today and tomorrow
   [activeDate(), tomorrowDate()].forEach(dateKey => {
     if (state.days[dateKey]) {
       const already = state.days[dateKey].tasks.some(t => t.recurringId === rec.id);
       if (!already) state.days[dateKey].tasks.push({ id: uid(), cat: rec.cat, name: rec.name, note: rec.note, done: false, recurringId: rec.id });
     }
   });
-  save();
-  console.log('Recurring task added and saved:', rec);
+  
+  document.getElementById('newRecInput').value = '';
+  document.getElementById('newRecCatSelect').value = '';
+  document.getElementById('newRecNote').value = '';
+  
   renderRecSettings(); 
-  render();
+  console.log('Recurring task added inline:', rec);
+}
+
+function addRec() {
+  // DEPRECATED - use inlineAddRec instead
 }
 
 function resetToday() {
-  if (!confirm('Reset de takenlijst van vandaag?')) return;
-  delete state.days[activeDate()];
-  save(); ensureDate(activeDate()); render();
-  closeSettings();
+  showConfirmModal('Reset de takenlijst van vandaag?', (ok) => {
+    if (!ok) return;
+    delete state.days[activeDate()];
+    save(); 
+    ensureDate(activeDate()); 
+    render();
+    closeSettings();
+  });
 }
 
 // ============================================================
