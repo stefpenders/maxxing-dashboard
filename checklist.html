@@ -1208,109 +1208,34 @@ function calcStreak() {
 // ============================================================
 // SUPABASE SYNC
 // ============================================================
-const SB_URL = 'https://teouxpndvftcswyybfxp.supabase.co';
-const SB_KEY = 'sb_publishable_Ogzh4cjZuJ2RUATM-lsOqA_-R0LzRRW';
-const SB_APP = 'maxxing-dashboard';
-let sbLastJson = null;
-let sbTimer = null;
+// NOTE: Supabase sync is handled by sync.js — no local sbPush/sbPull needed
 
-async function sbPull() {
-  try {
-    const res = await fetch(SB_URL + '/rest/v1/app_state?key=eq.' + SB_APP + '&select=data,updated_at', {
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
-    });
-    if (!res.ok) return false;
-    const rows = await res.json();
-    if (!rows || !rows[0] || !rows[0].data || !rows[0].data[LS]) return false;
-    const remote = rows[0].data[LS];
-    const incoming = JSON.stringify(remote);
-    const local = localStorage.getItem(LS);
-    if (incoming === local) return false;
-    // Always apply remote during boot (state is null), otherwise only if remote is newer
-    if (state !== null) {
-      // Compare updated_at timestamps if available
-      const remoteTime = rows[0].updated_at ? new Date(rows[0].updated_at).getTime() : 0;
-      const localState = JSON.parse(local || '{}');
-      const localTime = localState._savedAt || 0;
-      if (localTime > remoteTime) return false; // local is newer
-    }
-    localStorage.setItem(LS, incoming);
-    return true;
-  } catch(e) { return false; }
-}
-
-function sbPush() {
-  clearTimeout(sbTimer);
-  sbTimer = setTimeout(async () => {
-    try {
-      const data = {};
-      [LS, 'maxx_gym_v1', 'maxx_measure_v1'].forEach(k => {
-        const v = localStorage.getItem(k);
-        if (v) try { data[k] = JSON.parse(v); } catch(e) {}
-      });
-      const json = JSON.stringify(data);
-      if (json === sbLastJson) return;
-      const res = await fetch(SB_URL + '/rest/v1/app_state', {
-        method: 'POST',
-        headers: {
-          'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates,return=minimal'
-        },
-        body: JSON.stringify([{ key: SB_APP, data, updated_at: new Date().toISOString() }])
-      });
-      if (res.ok) sbLastJson = json;
-    } catch(e) {}
-  }, 800);
-}
-
-// Sync when coming back to tab
-document.addEventListener('visibilitychange', async () => {
-  if (!document.hidden) {
-    const changed = await sbPull();
-    if (changed) { state = loadState(); render(); renderChart(); }
-  }
-});
-window.addEventListener('focus', async () => {
-  const changed = await sbPull();
-  if (changed) { state = loadState(); render(); renderChart(); }
-});
-
-// Push on close
-window.addEventListener('pagehide', () => {
-  const data = {};
-  [LS, 'maxx_gym_v1', 'maxx_measure_v1'].forEach(k => {
-    const v = localStorage.getItem(k);
-    if (v) try { data[k] = JSON.parse(v); } catch(e) {}
-  });
-  fetch(SB_URL + '/rest/v1/app_state', {
-    method: 'POST',
-    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
-    body: JSON.stringify([{ key: SB_APP, data, updated_at: new Date().toISOString() }]),
-    keepalive: true
-  }).catch(() => {});
-});
-
-// ============================================================
-// BOOT — pull first, then load state, then render
+// BOOT — wait for sync.js to pull, then load state, then render
 // ============================================================
 document.getElementById('appTitle').textContent = CONFIG.appTitle;
 
 (async function boot() {
-  // Step 1: pull from Supabase into localStorage
-  await sbPull();
-  // Step 2: load state from localStorage (now has remote data)
+  // Wait for sync.js boot sequence (DOMContentLoaded already fired)
+  // It pulls from Supabase and hooks localStorage
+  await new Promise(resolve => {
+    if (document.readyState === 'complete') resolve();
+    else window.addEventListener('load', resolve);
+  });
+  
+  // Load state from localStorage (now has sync'd remote data via sync.js)
   state = loadState();
-  // Step 3: ensure today exists
+  
+  // Ensure today exists
   ensureDate(activeDate());
-  // Step 4: hide loader, show app
+  
+  // Hide loader, show app
   document.getElementById('loadingScreen').style.display = 'none';
   document.getElementById('mainShell').style.visibility = 'visible';
-  // Step 5: render
+  
+  // Render
   render();
   renderChart();
-  // Step 6: push our local state up
-  sbPush();
+  
   // Re-check every minute for day rollover
   setInterval(() => { ensureDate(activeDate()); render(); renderChart(); }, 60000);
 })();
