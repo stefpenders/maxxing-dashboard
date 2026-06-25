@@ -317,45 +317,62 @@ window.confirm = function(msg) {
   showConfirmModal(msg, (result) => {
     window.__confirmResult = result;
   });
-  // This is synchronous-like but doesn't block
-  // We need to handle this differently - use callbacks instead!
-  return true; // Fallback
+  return true;
 };
 
 window.alert = function(msg) {
   showAlertModal(msg);
 };
 
-document.getElementById('confirmOK').addEventListener('click', () => {
-  document.getElementById('confirmModal').style.display = 'none';
-  if (confirmCallback) { confirmCallback(true); confirmCallback = null; }
-  confirming = false;
-});
+// Setup event listeners when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  const confirmOK = document.getElementById('confirmOK');
+  const confirmCancel = document.getElementById('confirmCancel');
+  const alertOK = document.getElementById('alertOK');
+  const confirmModal = document.getElementById('confirmModal');
+  const alertModal = document.getElementById('alertModal');
 
-document.getElementById('confirmCancel').addEventListener('click', () => {
-  document.getElementById('confirmModal').style.display = 'none';
-  if (confirmCallback) { confirmCallback(false); confirmCallback = null; }
-  confirming = false;
-});
+  if (confirmOK) {
+    confirmOK.addEventListener('click', () => {
+      confirmModal.style.display = 'none';
+      if (confirmCallback) { confirmCallback(true); confirmCallback = null; }
+      confirming = false;
+    });
+  }
 
-document.getElementById('alertOK').addEventListener('click', () => {
-  document.getElementById('alertModal').style.display = 'none';
-});
+  if (confirmCancel) {
+    confirmCancel.addEventListener('click', () => {
+      confirmModal.style.display = 'none';
+      if (confirmCallback) { confirmCallback(false); confirmCallback = null; }
+      confirming = false;
+    });
+  }
 
-// Close on background click
-document.getElementById('confirmModal').addEventListener('click', e => {
-  if (e.target.id === 'confirmModal') {
-    document.getElementById('confirmModal').style.display = 'none';
-    if (confirmCallback) { confirmCallback(false); confirmCallback = null; }
-    confirming = false;
+  if (alertOK) {
+    alertOK.addEventListener('click', () => {
+      alertModal.style.display = 'none';
+    });
+  }
+
+  if (confirmModal) {
+    confirmModal.addEventListener('click', e => {
+      if (e.target.id === 'confirmModal') {
+        confirmModal.style.display = 'none';
+        if (confirmCallback) { confirmCallback(false); confirmCallback = null; }
+        confirming = false;
+      }
+    });
+  }
+
+  if (alertModal) {
+    alertModal.addEventListener('click', e => {
+      if (e.target.id === 'alertModal') {
+        alertModal.style.display = 'none';
+      }
+    });
   }
 });
 
-document.getElementById('alertModal').addEventListener('click', e => {
-  if (e.target.id === 'alertModal') {
-    document.getElementById('alertModal').style.display = 'none';
-  }
-});
 </script>
 const LS = 'maxx_checklist_v1';
 const RESET_HOUR = CONFIG.resetHour || 5;

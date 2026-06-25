@@ -2278,8 +2278,11 @@ function showAlertModal(msg) {
   document.getElementById('alertModal').style.display = 'flex';
 }
 
-if (document.getElementById('confirmOK')) {
-  document.getElementById('confirmOK').addEventListener('click', () => {
+document.addEventListener('DOMContentLoaded', () => {
+  const confirmOK = document.getElementById('confirmOK');
+  if (!confirmOK) return;
+
+  confirmOK.addEventListener('click', () => {
     document.getElementById('confirmModal').style.display = 'none';
     if (confirmCallback) { confirmCallback(true); confirmCallback = null; }
   });
@@ -2293,7 +2296,6 @@ if (document.getElementById('confirmOK')) {
     document.getElementById('alertModal').style.display = 'none';
   });
 
-  // Close on background click
   document.getElementById('confirmModal').addEventListener('click', e => {
     if (e.target.id === 'confirmModal') {
       document.getElementById('confirmModal').style.display = 'none';
@@ -2306,7 +2308,7 @@ if (document.getElementById('confirmOK')) {
       document.getElementById('alertModal').style.display = 'none';
     }
   });
-}
+});
 </script>
 <!-- Training end confirmation modal -->
 <div class="modal-bg" id="sessionEndModal" style="display:none;z-index:1000;background:rgba(0,0,0,0.9)">
