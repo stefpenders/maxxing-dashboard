@@ -1911,10 +1911,12 @@ html, body {
         const msg = exCount > 0
           ? '"' + day.name + '" verwijderen? ' + exCount + ' oefening(en) op deze dag worden onzichtbaar tot je ze verplaatst.'
           : '"' + day.name + '" verwijderen?';
-        if (!confirm(msg)) return;
-        state.days.splice(i, 1);
-        if (!state.days.find(d => d.id === state.filterDay)) state.filterDay = state.days[0].id;
-        save(); renderSetDays(); renderAll();
+        showConfirmModal(msg, (ok) => {
+          if (!ok) return;
+          state.days.splice(i, 1);
+          if (!state.days.find(d => d.id === state.filterDay)) state.filterDay = state.days[0].id;
+          save(); renderSetDays(); renderAll();
+        });
       });
     });
   }
@@ -2233,14 +2235,16 @@ html, body {
   window.addMetric=function(){
     const name=(prompt('Naam van de meting (bijv. Nek, Heup):','')||'').trim();
     if(!name)return;
-    const paired=confirm('Is dit een Links + Rechts meting?\n\nOK = Links + Rechts\nAnnuleren = Enkelvoudig');
-    const note=(prompt('Meetinstructie (optioneel):','')||'').trim();
-    const data=loadM();
-    if(!Array.isArray(data.metrics))data.metrics=DEFAULT_METRICS.map(m=>Object.assign({},m));
-    data.metrics.push({id:'m_'+Date.now(),name,unit:'cm',paired,note:note||null});
-    saveM(data);
-    renderMetricList();
-    renderMatenTab();
+    showConfirmModal('Is dit een Links + Rechts meting?\n\nOK = Links + Rechts\nAnnuleren = Enkelvoudig', (ok) => {
+      const paired = ok;
+      const note=(prompt('Meetinstructie (optioneel):','')||'').trim();
+      const data=loadM();
+      if(!Array.isArray(data.metrics))data.metrics=DEFAULT_METRICS.map(m=>Object.assign({},m));
+      data.metrics.push({id:'m_'+Date.now(),name,unit:'cm',paired,note:note||null});
+      saveM(data);
+      renderMetricList();
+      renderMatenTab();
+    });
   };
 })();
 </script>
