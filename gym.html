@@ -299,25 +299,7 @@ html, body {
 .rest-stop { color: var(--text-3); }
 .rest-stop:hover { color: var(--bad); border-color: rgba(255,138,138,0.3); }
 
-/* Target (progressive overload) block */
-.target-block {
-  background: rgba(240,136,62,0.04);
-  border: 1px solid rgba(240,136,62,0.14);
-  border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;
-  display: none;
-}
-.target-block.show { display: block; }
-.target-head {
-  font-size: 10px; letter-spacing: 0.14em; font-weight: 800;
-  text-transform: uppercase; color: #f0883e; margin-bottom: 10px;
-}
-.target-set {
-  display: grid; grid-template-columns: 54px 1fr auto; gap: 10px; align-items: center;
-  padding: 8px 0; border-bottom: 1px solid var(--border);
-}
-.target-set:last-child { border-bottom: none; }
-.target-set-label { font-size: 11px; color: var(--text-3); font-family: var(--font-mono); font-weight: 700; }
-.target-set-goal { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-1); }
+/* Target (progressive overload) block - REMOVED */
 .target-set-prev { font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
 .target-note { font-size: 11px; color: var(--text-2); margin-top: 8px; line-height: 1.4; }
 
@@ -828,11 +810,6 @@ html, body {
       <div id="prevSets"></div>
     </div>
 
-    <div class="target-block" id="targetBlock">
-      <div class="target-head">Doel deze keer — progressive overload</div>
-      <div id="targetSets"></div>
-    </div>
-
     <!-- Rest timer -->
     <div class="rest-timer" id="restTimer">
       <div class="rest-top">
@@ -845,7 +822,7 @@ html, body {
         <button class="rest-preset" data-sec="120">2 min</button>
         <button class="rest-preset" data-sec="180">3 min</button>
         <button class="rest-preset rest-custom" id="restCustomBtn">eigen</button>
-        <button class="rest-stop" id="restStopBtn">stop</button>
+        <button class="rest-stop" id="restStopBtn">pauze</button>
       </div>
     </div>
 
@@ -957,6 +934,18 @@ html, body {
       <label>Trainingsdagen</label>
       <div id="setDaysList" class="set-days-list"></div>
       <button class="btn-secondary" id="addDayBtn" style="margin-top:8px">+ Dag toevoegen</button>
+      <div style="display:flex;gap:8px;margin-top:8px;display:none" id="addDayForm">
+        <input type="text" id="newDayInput" placeholder="Dag naam" style="flex:1;padding:10px;border:1px solid rgba(255,255,255,0.1);border-radius:6px;background:rgba(255,255,255,0.05);color:#fff;font-size:14px">
+        <button class="btn-secondary" id="addDayBtnGo" style="margin:0">Toevoegen</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Rest tijd (standaard seconden)</label>
+      <div style="display:flex;gap:8px">
+        <input type="number" id="restTimeInput" min="5" max="600" style="flex:1;padding:10px;border:1px solid rgba(255,255,255,0.1);border-radius:6px;background:rgba(255,255,255,0.05);color:#fff;font-size:14px">
+        <button class="btn-secondary" id="restTimeSaveBtn" style="margin:0">Opslaan</button>
+      </div>
     </div>
 
     <div class="set-info-row">
@@ -1256,11 +1245,19 @@ html, body {
       const current = parseInt(carousel.dataset.value, 10) || 10;
       let next = current;
       
-      // Swipe links (←) = next number, swipe rechts (→) = previous number
+      // Swipe links (←) = next numbers, swipe rechts (→) = previous numbers
+      // Based on swipe distance: harder swipe = more change
+      let change = 0;
+      const absDiff = Math.abs(diff);
+      
+      if (absDiff >= 100) change = 3;
+      else if (absDiff >= 60) change = 2;
+      else if (absDiff > minSwipe) change = 1;
+      
       if (diff > minSwipe) {
-        next = Math.min(20, current + 1);
+        next = Math.min(20, current + change);
       } else if (diff < -minSwipe) {
-        next = Math.max(1, current - 1);
+        next = Math.max(1, current - change);
       }
       
       if (next !== current) {
@@ -1378,32 +1375,7 @@ html, body {
   }
 
   // Progressive overload goal per set, based on what you did that set last time.
-  // Rule: +1 rep vs last time. If last time already hit repMax -> add weight, reps back to repMin.
-  function renderTarget() {
-    const block = $('targetBlock');
-    const prev = prevSessionSets();
-    if (!prev) { block.classList.remove('show'); return; }
-    const ex = prev.ex;
-    const html = prev.sets.map((l, i) => {
-      let goal;
-      if (ex.bw) {
-        goal = (l.reps + 1) + ' reps';
-      } else if (l.reps >= ex.repMax) {
-        goal = (l.weight + ex.step) + U + ' × ' + ex.repMin;
-      } else {
-        goal = l.weight + U + ' × ' + (l.reps + 1);
-      }
-      const prevStr = ex.bw ? (l.reps + ' reps') : (l.weight + U + '×' + l.reps);
-      return '<div class="target-set">'
-        + '<div class="target-set-label">Set ' + (i+1) + '</div>'
-        + '<div class="target-set-goal">' + goal + '</div>'
-        + '<div class="target-set-prev">was ' + prevStr + '</div>'
-        + '</div>';
-    }).join('');
-    block.querySelector('#targetSets').innerHTML = html
-      + '<div class="target-note">+1 rep per set. Haal je de max reps → volgende keer gewicht erbij.</div>';
-    block.classList.add('show');
-  }
+  // renderTarget removed (progressive overload removed)
 
   function renderThisSession() {
     const ex = getCurrentEx();
@@ -1586,7 +1558,7 @@ html, body {
 
   function renderAll() {
     renderDaySeg(); renderExList(); renderForm();
-    renderRepsRow(); renderRpeRow(); renderPrev(); renderTarget(); renderThisSession();
+    renderRepsRow(); renderRpeRow(); renderPrev(); renderThisSession();
     renderStats(); renderSpark(); renderHistory();
     renderSession(); renderSessions(); renderExInfo(); renderWoProgress();
     const ex = getCurrentEx();
@@ -1691,8 +1663,8 @@ html, body {
   // ---------- rest timer ----------
   let restEndAt = null, restTotal = 0, restTick = null, restBeeped = false;
   function defaultRestSec() {
-    const v = parseInt(localStorage.getItem('maxx_gym_rest') || '120', 10);
-    return (isNaN(v) || v <= 0) ? 120 : v;
+    const v = parseInt(localStorage.getItem('maxx_gym_rest') || '90', 10);
+    return (isNaN(v) || v <= 0) ? 90 : v;
   }
   function fmtClock(sec) {
     sec = Math.max(0, Math.round(sec));
@@ -1737,24 +1709,56 @@ html, body {
       o.start(); o.stop(ctx.currentTime + 0.15);
     } catch (e) {}
   }
+  
+  let restPaused = false; // Track if timer is paused
+  let restRemain = 0; // Remaining seconds when paused
+  
+  function pauseRest() {
+    if (restTick) clearInterval(restTick);
+    restTick = null;
+    if (restEndAt != null) {
+      restRemain = Math.max(0, (restEndAt - Date.now()) / 1000);
+    }
+    restPaused = true;
+  }
+  
+  function resumeRest() {
+    if (restPaused && restRemain > 0) {
+      restPaused = false;
+      restTotal = restRemain;
+      restEndAt = Date.now() + restRemain * 1000;
+      if (restTick) clearInterval(restTick);
+      restTick = setInterval(tickRest, 250);
+      tickRest();
+    }
+  }
+  
   $('restTimer').addEventListener('click', e => {
     const p = e.target.closest('.rest-preset');
     if (p && p.dataset.sec) {
-      const sec = parseInt(p.dataset.sec, 10);
-      localStorage.setItem('maxx_gym_rest', sec);
-      startRest(sec);
+      if (restPaused) {
+        resumeRest();
+      } else {
+        const sec = parseInt(p.dataset.sec, 10);
+        localStorage.setItem('maxx_gym_rest', sec);
+        startRest(sec);
+      }
     }
   });
   $('restCustomBtn').addEventListener('click', () => {
-    const cur = Math.round(defaultRestSec());
-    const v = prompt('Rusttijd in seconden:', cur);
-    if (v == null) return;
-    const sec = parseInt(v, 10);
-    if (isNaN(sec) || sec <= 0) return;
-    localStorage.setItem('maxx_gym_rest', sec);
-    startRest(sec);
+    showAlertModal('Rest tijd aanpassen → Ga naar Instellingen');
   });
-  $('restStopBtn').addEventListener('click', stopRest);
+
+  $('restTimeSaveBtn').addEventListener('click', () => {
+    const val = parseInt($('restTimeInput').value, 10);
+    if (isNaN(val) || val < 5 || val > 600) {
+      showAlertModal('Geef een getal tussen 5 en 600 in');
+      return;
+    }
+    localStorage.setItem('maxx_gym_rest', val);
+    showAlertModal('Rest tijd opgeslagen: ' + val + 'sec');
+  });
+  $('restStopBtn').addEventListener('click', pauseRest);
 
   let editingExId = null, modalDay = null;
   function renderModalDaySeg() {
@@ -1921,13 +1925,32 @@ html, body {
     });
   }
   $('addDayBtn').addEventListener('click', () => {
-    const name = (prompt('Naam van de nieuwe dag (bijv. Armen, Schouders):') || '').trim();
-    if (!name) return;
-    state.days.push({ id: 'd_' + Date.now(), name });
-    save(); renderSetDays(); renderAll();
+    $('addDayForm').style.display = 'flex';
+    $('addDayBtn').style.display = 'none';
+    $('newDayInput').focus();
   });
 
-  $('settingsBtn').addEventListener('click', () => { renderAll(); renderSetDays(); $('setModalBg').classList.add('show'); });
+  $('addDayBtnGo').addEventListener('click', () => {
+    const name = ($('newDayInput').value || '').trim();
+    if (!name) {
+      showAlertModal('Geef dag naam in');
+      return;
+    }
+    state.days.push({ id: 'd_' + Date.now(), name });
+    save();
+    $('newDayInput').value = '';
+    $('addDayForm').style.display = 'none';
+    $('addDayBtn').style.display = 'block';
+    renderSetDays();
+  });
+
+  $('settingsBtn').addEventListener('click', () => { 
+    renderAll(); 
+    renderSetDays(); 
+    const savedRest = localStorage.getItem('maxx_gym_rest') || '90';
+    $('restTimeInput').value = savedRest;
+    $('setModalBg').classList.add('show'); 
+  });
   $('setClose').addEventListener('click', () => $('setModalBg').classList.remove('show'));
   $('setModalBg').addEventListener('click', e => { if (e.target === $('setModalBg')) $('setModalBg').classList.remove('show'); });
   $('resetBtn').addEventListener('click', () => {
@@ -2237,10 +2260,9 @@ html, body {
     if(!name)return;
     showConfirmModal('Is dit een Links + Rechts meting?\n\nOK = Links + Rechts\nAnnuleren = Enkelvoudig', (ok) => {
       const paired = ok;
-      const note=(prompt('Meetinstructie (optioneel):','')||'').trim();
       const data=loadM();
       if(!Array.isArray(data.metrics))data.metrics=DEFAULT_METRICS.map(m=>Object.assign({},m));
-      data.metrics.push({id:'m_'+Date.now(),name,unit:'cm',paired,note:note||null});
+      data.metrics.push({id:'m_'+Date.now(),name,unit:'cm',paired,note:null});
       saveM(data);
       renderMetricList();
       renderMatenTab();
