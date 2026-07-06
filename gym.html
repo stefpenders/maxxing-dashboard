@@ -353,11 +353,11 @@ html, body {
 /* Weight row */
 .weight-row { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; margin-bottom: 14px; }
 .w-btn {
-  padding: 0; min-width: 108px; min-height: 128px;
+  padding: 0; min-width: 76px; min-height: 84px;
   border: 1px solid var(--border);
   background: rgba(255,255,255,0.04);
   color: var(--text-1); border-radius: 14px;
-  font-family: inherit; font-size: 40px; font-weight: 700; cursor: pointer;
+  font-family: inherit; font-size: 30px; font-weight: 700; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 .w-btn:hover { background: rgba(255,255,255,0.10); }
@@ -366,8 +366,8 @@ html, body {
   border: 1px solid var(--border);
   background: rgba(0,0,0,0.28);
   color: var(--text-1); border-radius: 14px;
-  font-family: inherit; font-size: 32px; font-weight: 700; text-align: center;
-  font-variant-numeric: tabular-nums; padding: 14px 12px; min-height: 128px;
+  font-family: inherit; font-size: 28px; font-weight: 700; text-align: center;
+  font-variant-numeric: tabular-nums; padding: 14px 12px; min-height: 84px;
   -moz-appearance: textfield; outline: none;
 }
 .w-input::-webkit-outer-spin-button, .w-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -423,17 +423,20 @@ html, body {
   flex-direction: row;
   gap: 8px;
   align-items: center;
-  justify-content: center;
   width: 100%;
-  overflow-x: hidden;
+  overflow-x: auto;
   scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   position: relative;
-  padding: 0 60px;
-  margin: 0 -60px;
+  padding: 0 calc(50% - 26px);
+  margin: 0;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: pan-y;
+  touch-action: pan-x;
 }
+#repsCarousel::-webkit-scrollbar { display: none; }
 
 .rep-button {
   flex-shrink: 0;
@@ -454,6 +457,8 @@ html, body {
   cursor: pointer;
   opacity: 0.4;
   transform: scale(0.8);
+  scroll-snap-align: center;
+  scroll-snap-stop: normal;
 }
 
 .rep-button.active {
@@ -1222,46 +1227,37 @@ html, body {
     }, 0);
   }
   
-  // Rolling wheel swipe handler - horizontal, smooth continuous
+  // Rolling wheel — echte native scroll met snap. De telefoon doet zelf de
+  // momentum-natuurkunde (zacht scrollen = klein beetje, hard flicken = rolt door
+  // en remt af) — precies hetzelfde gevoel als elke andere scrollbare lijst.
   (function() {
     const carousel = $('repsCarousel');
-    let touchStartX = 0;
-    let startValue = 10;
-    let lastApplied = 10;
-    const pxPerRep = 28; // afstand per rep-stap — kleiner = gevoeliger
+    let lastApplied = parseInt(carousel.dataset.value, 10) || 10;
+    let rafId = null;
 
-    function applyValue(next, smooth) {
-      next = Math.max(1, Math.min(20, next));
-      if (next === lastApplied) return;
-      carousel.querySelectorAll('.rep-button').forEach(x => x.classList.remove('active'));
-      const nextBtn = carousel.querySelector('[data-v="' + next + '"]');
-      if (nextBtn) {
-        nextBtn.classList.add('active');
-        carousel.dataset.value = String(next);
-        // Tijdens het slepen: direct volgen (geen animatie-vertraging/onderbreking).
-        // Alleen bij loslaten een klein smooth-tikje voor de laatste centrering.
-        nextBtn.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'nearest', inline: 'center' });
-        lastApplied = next;
+    function updateActiveFromScroll() {
+      const rect = carousel.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      let closest = null, closestDist = Infinity;
+      carousel.querySelectorAll('.rep-button').forEach(btn => {
+        const r = btn.getBoundingClientRect();
+        const d = Math.abs((r.left + r.width / 2) - centerX);
+        if (d < closestDist) { closestDist = d; closest = btn; }
+      });
+      if (closest) {
+        const v = parseInt(closest.dataset.v, 10);
+        if (v !== lastApplied) {
+          carousel.querySelectorAll('.rep-button').forEach(x => x.classList.remove('active'));
+          closest.classList.add('active');
+          carousel.dataset.value = String(v);
+          lastApplied = v;
+        }
       }
     }
 
-    carousel.addEventListener('touchstart', (e) => {
-      touchStartX = e.touches[0].clientX;
-      startValue = parseInt(carousel.dataset.value, 10) || 10;
-      lastApplied = startValue;
-    }, { passive: true });
-
-    carousel.addEventListener('touchmove', (e) => {
-      const curX = e.touches[0].clientX;
-      const diff = touchStartX - curX; // swipe links (vinger naar links) = positief = omhoog
-      const change = Math.round(diff / pxPerRep);
-      applyValue(startValue + change, false);
-    }, { passive: true });
-
-    carousel.addEventListener('touchend', () => {
-      const cur = parseInt(carousel.dataset.value, 10);
-      const btn = carousel.querySelector('[data-v="' + cur + '"]');
-      if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    carousel.addEventListener('scroll', () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => { updateActiveFromScroll(); rafId = null; });
     }, { passive: true });
   })();
   function renderRpeRow() {
@@ -1582,6 +1578,7 @@ html, body {
     const p = e.target.closest('.rep-button'); if(!p) return;
     $('repsCarousel').querySelectorAll('.rep-button').forEach(x=>x.classList.remove('active'));
     p.classList.add('active'); $('repsCarousel').dataset.value = p.dataset.v;
+    p.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   });
   $('rpeRow').addEventListener('click', e => {
     const p = e.target.closest('.pill'); if(!p) return;
