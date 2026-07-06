@@ -12,6 +12,7 @@
     'maxx_checklist_v1',
     'maxx_gym_v1',
     'maxx_measure_v1',
+    'maxx_timetracker_v1',
     'po_coach_workout_done',
   ];
 
@@ -19,6 +20,7 @@
   let lastJson = null;
   let suppress = false;
   let booting = true;
+  let dirty = false; // true = er zijn lokale wijzigingen die nog niet bevestigd zijn weggeschreven
 
   function collectAll() {
     const out = {};
@@ -31,6 +33,7 @@
 
   function applyRemote(remote) {
     if (!remote || typeof remote !== 'object') return;
+    if (dirty) return; // nooit onopgeslagen lokale wijzigingen overschrijven
     suppress = true;
     let changed = false;
     SYNC_KEYS.forEach(k => {
@@ -53,7 +56,7 @@
   async function push() {
     const data = collectAll();
     const json = JSON.stringify(data);
-    if (json === lastJson) return;
+    if (json === lastJson) { dirty = false; return; }
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/app_state', {
         method: 'POST',
@@ -65,8 +68,28 @@
         },
         body: JSON.stringify([{ key: APP_KEY, data, updated_at: new Date().toISOString() }])
       });
-      if (res.ok) lastJson = json;
+      if (res.ok) { lastJson = json; dirty = false; }
     } catch(e) {}
+  }
+
+  // Directe, betrouwbare save — gebruikt bij backgrounding/sluiten (keepalive blijft
+  // doorlopen ook als de pagina meteen daarna verdwijnt).
+  function flush() {
+    clearTimeout(pushTimer);
+    const data = collectAll();
+    const json = JSON.stringify(data);
+    if (json === lastJson) { dirty = false; return; }
+    fetch(SUPABASE_URL + '/rest/v1/app_state', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify([{ key: APP_KEY, data, updated_at: new Date().toISOString() }]),
+      keepalive: true
+    }).then(res => { if (res && res.ok) { lastJson = json; dirty = false; } }).catch(() => {});
   }
 
   async function pull() {
@@ -83,8 +106,9 @@
 
   function schedulePush() {
     if (suppress) return;
+    dirty = true;
     clearTimeout(pushTimer);
-    pushTimer = setTimeout(push, 800);
+    pushTimer = setTimeout(push, 250);
   }
 
   // Hook localStorage
@@ -108,25 +132,18 @@
     setTimeout(schedulePush, 500);
   });
 
-  // Sync bij terugkeren naar tab
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); });
-  window.addEventListener('focus', pull);
-
-  // Push bij sluiten
-  window.addEventListener('pagehide', () => {
-    const data = collectAll();
-    const json = JSON.stringify(data);
-    if (json === lastJson) return;
-    fetch(SUPABASE_URL + '/rest/v1/app_state', {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify([{ key: APP_KEY, data, updated_at: new Date().toISOString() }]),
-      keepalive: true
-    }).catch(() => {});
+  // Sync bij terugkeren naar tab / weggaan van tab
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      // Scherm uit / andere app / tab sluiten — sla nu meteen betrouwbaar op
+      flush();
+    } else {
+      // Terug in beeld — eerst eigen wijzigingen wegschrijven, dan pas ophalen
+      if (dirty) { push().then(pull); } else { pull(); }
+    }
   });
+  window.addEventListener('focus', () => { if (dirty) { push().then(pull); } else { pull(); } });
+
+  // Push bij sluiten/navigeren weg
+  window.addEventListener('pagehide', flush);
 })();

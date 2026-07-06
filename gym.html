@@ -352,11 +352,11 @@ html, body {
 /* Weight row */
 .weight-row { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; margin-bottom: 14px; }
 .w-btn {
-  padding: 0 16px; min-width: 48px;
+  padding: 0 20px; min-width: 96px; min-height: 64px;
   border: 1px solid var(--border);
   background: rgba(255,255,255,0.04);
   color: var(--text-1); border-radius: 12px;
-  font-family: inherit; font-size: 20px; font-weight: 700; cursor: pointer;
+  font-family: inherit; font-size: 28px; font-weight: 700; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 .w-btn:hover { background: rgba(255,255,255,0.10); }
@@ -1221,54 +1221,42 @@ html, body {
     }, 0);
   }
   
-  // Rolling wheel swipe handler - horizontal
+  // Rolling wheel swipe handler - horizontal, smooth continuous
   (function() {
     const carousel = $('repsCarousel');
     let touchStartX = 0;
-    let touchStartTime = 0;
-    
+    let startValue = 10;
+    let lastApplied = 10;
+    const pxPerRep = 28; // afstand per rep-stap — kleiner = gevoeliger
+
+    function applyValue(next) {
+      next = Math.max(1, Math.min(20, next));
+      if (next === lastApplied) return;
+      carousel.querySelectorAll('.rep-button').forEach(x => x.classList.remove('active'));
+      const nextBtn = carousel.querySelector('[data-v="' + next + '"]');
+      if (nextBtn) {
+        nextBtn.classList.add('active');
+        carousel.dataset.value = String(next);
+        nextBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        lastApplied = next;
+      }
+    }
+
     carousel.addEventListener('touchstart', (e) => {
       touchStartX = e.touches[0].clientX;
-      touchStartTime = Date.now();
+      startValue = parseInt(carousel.dataset.value, 10) || 10;
+      lastApplied = startValue;
     }, { passive: true });
-    
-    carousel.addEventListener('touchend', (e) => {
-      const touchEndX = e.changedTouches[0].clientX;
-      const touchDuration = Date.now() - touchStartTime;
-      const diff = touchStartX - touchEndX;
-      const minSwipe = 25;
-      const maxDuration = 500;
-      
-      // Only register swipe if: sufficient distance AND not too slow
-      if (Math.abs(diff) < minSwipe || touchDuration > maxDuration) return;
-      
-      const current = parseInt(carousel.dataset.value, 10) || 10;
-      let next = current;
-      
-      // Swipe links (←) = next numbers, swipe rechts (→) = previous numbers
-      // Based on swipe distance: harder swipe = more change
-      let change = 0;
-      const absDiff = Math.abs(diff);
-      
-      if (absDiff >= 100) change = 3;
-      else if (absDiff >= 60) change = 2;
-      else if (absDiff > minSwipe) change = 1;
-      
-      if (diff > minSwipe) {
-        next = Math.min(20, current + change);
-      } else if (diff < -minSwipe) {
-        next = Math.max(1, current - change);
-      }
-      
-      if (next !== current) {
-        carousel.querySelectorAll('.rep-button').forEach(x => x.classList.remove('active'));
-        const nextBtn = carousel.querySelector('[data-v="' + next + '"]');
-        if (nextBtn) {
-          nextBtn.classList.add('active');
-          carousel.dataset.value = String(next);
-          nextBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-        }
-      }
+
+    carousel.addEventListener('touchmove', (e) => {
+      const curX = e.touches[0].clientX;
+      const diff = touchStartX - curX; // swipe links (vinger naar links) = positief = omhoog
+      const change = Math.round(diff / pxPerRep);
+      applyValue(startValue + change);
+    }, { passive: true });
+
+    carousel.addEventListener('touchend', () => {
+      // waarde staat al goed door touchmove; niets extra's nodig
     }, { passive: true });
   })();
   function renderRpeRow() {
