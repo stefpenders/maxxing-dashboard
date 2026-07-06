@@ -352,11 +352,11 @@ html, body {
 /* Weight row */
 .weight-row { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; margin-bottom: 14px; }
 .w-btn {
-  padding: 0 20px; min-width: 96px; min-height: 64px;
+  padding: 0; min-width: 130px; min-height: 128px;
   border: 1px solid var(--border);
   background: rgba(255,255,255,0.04);
-  color: var(--text-1); border-radius: 12px;
-  font-family: inherit; font-size: 28px; font-weight: 700; cursor: pointer;
+  color: var(--text-1); border-radius: 14px;
+  font-family: inherit; font-size: 40px; font-weight: 700; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 .w-btn:hover { background: rgba(255,255,255,0.10); }
@@ -364,9 +364,9 @@ html, body {
 .w-input {
   border: 1px solid var(--border);
   background: rgba(0,0,0,0.28);
-  color: var(--text-1); border-radius: 12px;
-  font-family: inherit; font-size: 22px; font-weight: 700; text-align: center;
-  font-variant-numeric: tabular-nums; padding: 14px 12px;
+  color: var(--text-1); border-radius: 14px;
+  font-family: inherit; font-size: 32px; font-weight: 700; text-align: center;
+  font-variant-numeric: tabular-nums; padding: 14px 12px; min-height: 128px;
   -moz-appearance: textfield; outline: none;
 }
 .w-input::-webkit-outer-spin-button, .w-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -1229,7 +1229,7 @@ html, body {
     let lastApplied = 10;
     const pxPerRep = 28; // afstand per rep-stap — kleiner = gevoeliger
 
-    function applyValue(next) {
+    function applyValue(next, smooth) {
       next = Math.max(1, Math.min(20, next));
       if (next === lastApplied) return;
       carousel.querySelectorAll('.rep-button').forEach(x => x.classList.remove('active'));
@@ -1237,7 +1237,9 @@ html, body {
       if (nextBtn) {
         nextBtn.classList.add('active');
         carousel.dataset.value = String(next);
-        nextBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        // Tijdens het slepen: direct volgen (geen animatie-vertraging/onderbreking).
+        // Alleen bij loslaten een klein smooth-tikje voor de laatste centrering.
+        nextBtn.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'nearest', inline: 'center' });
         lastApplied = next;
       }
     }
@@ -1252,11 +1254,13 @@ html, body {
       const curX = e.touches[0].clientX;
       const diff = touchStartX - curX; // swipe links (vinger naar links) = positief = omhoog
       const change = Math.round(diff / pxPerRep);
-      applyValue(startValue + change);
+      applyValue(startValue + change, false);
     }, { passive: true });
 
     carousel.addEventListener('touchend', () => {
-      // waarde staat al goed door touchmove; niets extra's nodig
+      const cur = parseInt(carousel.dataset.value, 10);
+      const btn = carousel.querySelector('[data-v="' + cur + '"]');
+      if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }, { passive: true });
   })();
   function renderRpeRow() {

@@ -66,7 +66,8 @@
           'Content-Type': 'application/json',
           'Prefer': 'resolution=merge-duplicates,return=minimal'
         },
-        body: JSON.stringify([{ key: APP_KEY, data, updated_at: new Date().toISOString() }])
+        body: JSON.stringify([{ key: APP_KEY, data, updated_at: new Date().toISOString() }]),
+        keepalive: true
       });
       if (res.ok) { lastJson = json; dirty = false; }
     } catch(e) {}
@@ -108,7 +109,9 @@
     if (suppress) return;
     dirty = true;
     clearTimeout(pushTimer);
-    pushTimer = setTimeout(push, 250);
+    // Geen wachttijd meer: verzenden begint meteen. Dit is cruciaal op mobiel,
+    // waar het scherm/app binnen een fractie van een seconde kan bevriezen.
+    push();
   }
 
   // Hook localStorage
