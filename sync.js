@@ -6,7 +6,14 @@
 (function () {
   const SUPABASE_URL = 'https://teouxpndvftcswyybfxp.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_Ogzh4cjZuJ2RUATM-lsOqA_-R0LzRRW';
-  const APP_KEY = 'maxxing-dashboard';
+
+  // Stef zelf (geen login) blijft altijd op deze vaste sleutel — zijn data
+  // verandert hierdoor niet. Is er een vriend ingelogd (via login.html), dan
+  // krijgt die zijn eigen aparte rij in dezelfde Supabase-tabel.
+  function currentAppKey() {
+    const u = localStorage.getItem('maxx_active_user');
+    return u ? ('friend_' + u) : 'maxxing-dashboard';
+  }
 
   const SYNC_KEYS = [
     'maxx_checklist_v1',
@@ -66,7 +73,7 @@
           'Content-Type': 'application/json',
           'Prefer': 'resolution=merge-duplicates,return=minimal'
         },
-        body: JSON.stringify([{ key: APP_KEY, data, updated_at: new Date().toISOString() }]),
+        body: JSON.stringify([{ key: currentAppKey(), data, updated_at: new Date().toISOString() }]),
         keepalive: true
       });
       if (res.ok) { lastJson = json; dirty = false; }
@@ -88,7 +95,7 @@
         'Content-Type': 'application/json',
         'Prefer': 'resolution=merge-duplicates,return=minimal'
       },
-      body: JSON.stringify([{ key: APP_KEY, data, updated_at: new Date().toISOString() }]),
+      body: JSON.stringify([{ key: currentAppKey(), data, updated_at: new Date().toISOString() }]),
       keepalive: true
     }).then(res => { if (res && res.ok) { lastJson = json; dirty = false; } }).catch(() => {});
   }
@@ -96,7 +103,7 @@
   async function pull() {
     try {
       const res = await fetch(
-        SUPABASE_URL + '/rest/v1/app_state?key=eq.' + APP_KEY + '&select=data',
+        SUPABASE_URL + '/rest/v1/app_state?key=eq.' + currentAppKey() + '&select=data',
         { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
       );
       if (!res.ok) return;

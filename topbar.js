@@ -94,6 +94,23 @@
     inner.appendChild(a);
   });
 
+  // Alleen zichtbaar als er een vriend is ingelogd (Stef ziet dit nooit).
+  const activeUser = localStorage.getItem('maxx_active_user');
+  if (activeUser) {
+    const out = document.createElement('a');
+    out.className = 'mx-nav-btn';
+    out.href = '#';
+    out.style.flex = '0 0 auto';
+    out.style.color = 'rgba(255,255,255,0.35)';
+    out.innerHTML = '<span class="mx-nav-label">Uitloggen</span>';
+    out.addEventListener('click', (e) => {
+      e.preventDefault();
+      localStorage.removeItem('maxx_active_user');
+      window.location.href = 'login.html';
+    });
+    inner.appendChild(out);
+  }
+
   bar.appendChild(inner);
 
   // Insert as first element in body
