@@ -14,6 +14,9 @@
      - exercises: startoefeningen. repMin/repMax = doelbereik,
        step = hoeveel kg je toevoegt, startWeight = beginpunt.
        bw:true = bodyweight (alleen reps).
+       Varianten (A/B) horen niet in dit startblok. Die leven in de
+       opgeslagen staat als gewone oefeningen met hetzelfde slot.
+       Vorm: README, sectie "Gym data".
      - targetRPE: rond welke zwaarte je wilt trainen (8 = ~2 reps
        in de tank). Haal je je reps onder deze RPE → advies: kilo erbij.
      ============================================================= -->
@@ -548,7 +551,7 @@ html, body {
 .modal-bg {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
-  z-index: 100; align-items: center; justify-content: center; padding: 20px;
+  z-index: 260; align-items: center; justify-content: center; padding: 20px;
 }
 .modal-bg.show { display: flex; }
 .modal {
@@ -654,7 +657,79 @@ html, body {
 .ex-grip:active { cursor: grabbing; }
 .ex-check { color: #f0883e; flex-shrink: 0; width: 14px; opacity: 0; }
 .ex-item.active .ex-check { opacity: 1; }
-.ex-item-name { flex: 1; }
+.ex-item-name { flex: 1; min-width: 0; }
+.ex-slot { display: flex; flex-direction: column; gap: 6px; }
+.ex-slot.dragging { opacity: 0.5; }
+.ex-slot.drop-target { box-shadow: 0 -2px 0 #f0883e; }
+.var-add-btn {
+  flex-shrink: 0; min-height: 44px; padding: 8px 14px;
+  border-radius: 999px; border: 1px solid rgba(240,136,62,0.5);
+  background: rgba(240,136,62,0.14); color: #f0883e;
+  font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.var-add-btn:hover { background: rgba(240,136,62,0.24); }
+.var-add-btn[hidden] { display: none; }
+.var-add-btn:focus-visible { outline: 2px solid #f0883e; outline-offset: 2px; }
+.var-switch-wrap { margin-top: 8px; }
+.var-switch-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text-3); margin-bottom: 6px;
+}
+.var-switch { display: flex; flex-wrap: wrap; gap: 6px; }
+.var-btn {
+  flex: 1 1 140px; min-width: 0; min-height: 48px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.05); color: var(--text-1);
+  font-family: inherit; text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.var-btn:hover { background: rgba(255,255,255,0.1); }
+.var-btn:focus-visible { outline: 2px solid #f0883e; outline-offset: 2px; }
+.var-btn.active {
+  background: rgba(240,136,62,0.18);
+  border-color: rgba(240,136,62,0.7);
+}
+.var-letter {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 14px;
+  background: rgba(255,255,255,0.08); color: var(--text-1);
+}
+.var-btn.active .var-letter { background: #f0883e; color: #0a0a0b; }
+.var-name {
+  flex: 1; min-width: 0; font-size: 13px; font-weight: 600; line-height: 1.25;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow-wrap: anywhere;
+}
+.var-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 6px; margin-right: 6px;
+  border-radius: 6px; background: #f0883e; color: #0a0a0b;
+  font-size: 12px; font-weight: 800; vertical-align: middle;
+}
+.var-manage { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.var-manage-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border); border-radius: 10px;
+}
+.var-manage-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; line-height: 1.3; }
+.var-remove {
+  flex-shrink: 0; min-height: 44px; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid rgba(255,138,138,0.35); background: transparent; color: var(--bad);
+  font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.var-remove:hover { background: rgba(255,138,138,0.1); }
+.var-next-hint { font-size: 12px; color: var(--text-3); margin: -4px 0 12px; line-height: 1.4; }
+#varModalBg { z-index: 280; }
+#varModalBg .modal-actions {
+  position: sticky; bottom: 0; background: var(--bg-card); padding-top: 10px;
+}
+#varModalBg input { font-size: 16px; }
 
 /* Tabs */
 .gym-tabs { display: flex; gap: 6px; margin-bottom: 18px; }
@@ -764,8 +839,9 @@ html, body {
     </div>
 
     <!-- Exercise -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px;gap:8px">
       <div class="sub-title" style="margin:0">Oefening</div>
+      <button type="button" class="var-add-btn" id="addVariantBtn">+ Variant</button>
     </div>
     <div id="exList"></div>
 
@@ -922,11 +998,43 @@ html, body {
       </div>
     </div>
 
+    <div id="exVariantBox" hidden></div>
+
     <div class="modal-actions">
       <button class="btn-secondary" id="exCancel">Annuleren</button>
       <button class="btn-primary" id="exSave">Opslaan</button>
     </div>
     <button type="button" class="delete-link" id="exDelete" style="display:none">Deze oefening verwijderen</button>
+  </div>
+</div>
+
+<!-- Variant toevoegen / verwijderen -->
+<div class="modal-bg" id="varModalBg">
+  <div class="modal">
+    <h3 id="varModalTitle">Variant toevoegen</h3>
+    <p class="modal-note">Elke variant houdt zijn eigen gewicht, sets en progressie. Wisselen tijdens de training doe je met de knoppen A en B op de oefening.</p>
+    <div id="varExisting"></div>
+    <div class="field">
+      <label>Naam</label>
+      <input type="text" id="varName" placeholder="bijv. Incline Dumbbell Press" autocomplete="off" enterkeyhint="done">
+    </div>
+    <p class="var-next-hint" id="varNextHint"></p>
+    <div class="field" id="varWeightField">
+      <label>Startgewicht (kg)</label>
+      <input type="number" id="varStart" step="0.5" inputmode="decimal" placeholder="0">
+    </div>
+    <div class="two-col">
+      <div class="field"><label>Reps min</label><input type="number" id="varRepMin" inputmode="numeric"></div>
+      <div class="field"><label>Reps max</label><input type="number" id="varRepMax" inputmode="numeric"></div>
+    </div>
+    <div class="field" id="varStepField">
+      <label>Gewicht erbij (stap)</label>
+      <input type="number" id="varStep" step="0.5" inputmode="decimal">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" id="varCancel">Annuleren</button>
+      <button type="button" class="btn-primary" id="varSave">Variant opslaan</button>
+    </div>
   </div>
 </div>
 
@@ -984,11 +1092,17 @@ html, body {
     if (!Array.isArray(s.exercises)) {
       s.exercises = CONFIG.exercises.map((e, i) => Object.assign({ id: 'seed_' + i }, e));
     }
+    // Nooit logs herschrijven of legen. Bestaande sets blijven onder hun exercise-id.
     s.logs = (s.logs && typeof s.logs === 'object') ? s.logs : {};  // { exId: [{weight,reps,rpe,date}] }
     s.filterDay = s.filterDay || s.days[0].id;
     s.currentEx = s.currentEx || null;
     s.session = (s.session && typeof s.session === 'object') ? s.session : null;  // { startedAt }
     s.sessions = Array.isArray(s.sessions) ? s.sessions : [];  // [{ date, startedAt, endedAt, durationMin, sets }]
+    // variantChoice: { slotId: exerciseId } van de laatst gekozen variant.
+    // Afwezig laten als de data het nog niet heeft, zodat oude staat gelijk blijft.
+    if (s.variantChoice != null && (typeof s.variantChoice !== 'object' || Array.isArray(s.variantChoice))) {
+      s.variantChoice = {};
+    }
     return s;
   }
   function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {} }
@@ -999,15 +1113,125 @@ html, body {
   function uid() { return 'ex_' + Date.now() + '_' + Math.floor(Math.random()*9999); }
   function est1RM(w, r) { return r < 2 ? w : w * (1 + r/30); }
   function roundStep(v, s) { return Math.round(v/s) * s; }
-  function getForDay() { return state.exercises.filter(e => e.day === state.filterDay); }
+  // Een variant is een gewone oefening met een eigen id. Oefeningen met
+  // dezelfde slot-string op dezelfde dag zijn A/B/C van één plek.
+  // Zonder slot (oude data) is de oefening zelf die plek.
+  function slotIdOf(ex) {
+    if (!ex || typeof ex.slot !== 'string') return null;
+    const s = ex.slot.trim();
+    return s ? s : null;
+  }
+  function groupKey(ex) {
+    const slot = slotIdOf(ex);
+    if (slot) return 's:' + slot;
+    return 'e:' + (ex && ex.id ? ex.id : '');
+  }
+  function letterFor(i) { return i < 26 ? String.fromCharCode(65 + i) : String(i + 1); }
+  function membersOf(ex) {
+    if (!ex) return [];
+    const slot = slotIdOf(ex);
+    if (!slot) return [ex];
+    return state.exercises.filter(e => e && e.day === ex.day && slotIdOf(e) === slot);
+  }
+  function slotsForDay(dayId) {
+    const out = [];
+    const seen = new Set();
+    state.exercises.forEach((ex, idx) => {
+      if (!ex || ex.day !== dayId) return;
+      const slot = slotIdOf(ex);
+      const key = slot ? ('s:' + slot) : ('e:' + (ex.id || ('idx' + idx)));
+      if (seen.has(key)) return;
+      seen.add(key);
+      const members = slot
+        ? state.exercises.filter(e => e && e.day === dayId && slotIdOf(e) === slot)
+        : [ex];
+      out.push({ key: key, slot: slot, members: members });
+    });
+    return out;
+  }
+  function preferredMember(members) {
+    if (!members || !members.length) return null;
+    const slot = slotIdOf(members[0]);
+    const choice = slot && state.variantChoice && typeof state.variantChoice === 'object'
+      ? state.variantChoice[slot] : null;
+    if (choice) {
+      const hit = members.find(m => m.id === choice);
+      if (hit) return hit;
+    }
+    return members[0];
+  }
+  function displayMember(members) {
+    if (!members || !members.length) return null;
+    const live = members.find(m => m.id === state.currentEx);
+    if (live) return live;
+    return preferredMember(members);
+  }
+  function rememberChoice(ex) {
+    const slot = slotIdOf(ex);
+    if (!slot || !ex.id) return;
+    if (!state.variantChoice || typeof state.variantChoice !== 'object' || Array.isArray(state.variantChoice)) {
+      state.variantChoice = {};
+    }
+    state.variantChoice[slot] = ex.id;
+  }
+  function variantTag(ex) {
+    const members = membersOf(ex);
+    if (members.length < 2) return '';
+    const i = members.findIndex(m => m.id === ex.id);
+    return i < 0 ? '' : letterFor(i);
+  }
+  function labeledName(ex) {
+    const tag = variantTag(ex);
+    return tag ? (tag + ' · ' + ex.name) : ex.name;
+  }
+  function variantSwitchHtml(ex) {
+    const members = membersOf(ex);
+    if (members.length < 2) return '';
+    return '<div class="var-switch-wrap">'
+      + '<div class="var-switch-label">Variant</div>'
+      + '<div class="var-switch" role="group" aria-label="Variant wisselen">'
+      + members.map((m, i) => {
+          const on = m.id === ex.id;
+          const letter = letterFor(i);
+          return '<button type="button" class="var-btn' + (on ? ' active' : '') + '"'
+            + ' data-pick-variant="' + esc(m.id) + '"'
+            + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
+            + ' aria-label="' + esc((on ? 'Huidige variant ' : 'Wissel naar ') + letter + ', ' + m.name) + '">'
+            + '<span class="var-letter">' + letter + '</span>'
+            + '<span class="var-name">' + esc(m.name) + '</span>'
+            + '</button>';
+        }).join('')
+      + '</div></div>';
+  }
+  // Eén zichtbare oefening per slot: de laatst gekozen variant, of de variant die nu open staat.
+  function getForDay() {
+    return slotsForDay(state.filterDay).map(s => displayMember(s.members)).filter(Boolean);
+  }
   function getCurrentEx() {
-    const f = getForDay();
-    if (!f.length) return null;
-    let ex = f.find(e => e.id === state.currentEx);
-    if (!ex) { ex = f[0]; state.currentEx = ex.id; save(); }
+    const slots = slotsForDay(state.filterDay);
+    if (!slots.length) return null;
+    const hit = slots.find(s => s.members.some(m => m.id === state.currentEx));
+    if (hit) return hit.members.find(m => m.id === state.currentEx);
+    const ex = preferredMember(slots[0].members);
+    if (ex && state.currentEx !== ex.id) { state.currentEx = ex.id; save(); }
     return ex;
   }
-  function getLogs() { return (state.logs[state.currentEx] || []).slice(); }
+  function getLogs() {
+    const arr = state.logs && state.logs[state.currentEx];
+    return Array.isArray(arr) ? arr.slice() : [];
+  }
+  function selectVariant(exId) {
+    const ex = state.exercises.find(e => e && e.id === exId);
+    if (!ex) return;
+    const already = state.currentEx === ex.id;
+    rememberChoice(ex);
+    if (already) { save(); return; }
+    state.currentEx = ex.id;
+    state.filterDay = ex.day || state.filterDay;
+    editingSetIdx = null;
+    save();
+    renderAll();
+  }
   function esc(s) { return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   // ---------- progression engine (RPE-aware) ----------
@@ -1073,96 +1297,131 @@ html, body {
       '<button class="seg-btn ' + (d.id===state.filterDay?'active':'') + '" data-day="' + d.id + '">' + esc(d.name) + '</button>'
     ).join('');
     $('daySeg').querySelectorAll('.seg-btn').forEach(b => {
-      b.addEventListener('click', () => { state.filterDay = b.dataset.day; state.currentEx = null; save(); renderAll(); });
+      b.addEventListener('click', () => { state.filterDay = b.dataset.day; state.currentEx = null; editingSetIdx = null; save(); renderAll(); });
     });
   }
   let exListExpanded = false;
 
+  function exSlotHtml(e) {
+    const tag = variantTag(e);
+    const multi = membersOf(e).length > 1;
+    return '<div class="ex-slot" data-id="' + esc(e.id) + '" data-slot-key="' + esc(groupKey(e)) + '">'
+      + '<div class="ex-item' + (e.id === state.currentEx ? ' active' : '') + '">'
+      + '<span class="ex-grip" data-grip>⋮⋮</span>'
+      + '<span class="ex-check">✓</span>'
+      + '<span class="ex-item-name">' + (tag ? '<span class="var-badge">' + tag + '</span>' : '') + esc(e.name) + '</span>'
+      + '</div>'
+      + (multi ? variantSwitchHtml(e) : '')
+      + '</div>';
+  }
   function renderExList() {
     const list = $('exList');
+    const addV = $('addVariantBtn');
+    const ex = getCurrentEx();
     const f = getForDay();
-    if (!f.length) {
+    if (!f.length || !ex) {
       list.innerHTML = '<div class="empty">Nog geen oefeningen. Klap de lijst uit via + om oefeningen toe te voegen.</div>';
       const lb = $('logBtn'); if (lb) lb.disabled = true;
-      state.currentEx = null; return;
+      state.currentEx = null;
+      if (addV) addV.hidden = true;
+      return;
     }
+    if (addV) addV.hidden = false;
     const lb = $('logBtn'); if (lb) lb.disabled = false;
-    if (!f.find(e => e.id === state.currentEx)) state.currentEx = f[0].id;
-    const curIdx = f.findIndex(e => e.id === state.currentEx);
+    const curIdx = Math.max(0, f.findIndex(e => e.id === ex.id));
     const cur = f[curIdx];
     const next = f[curIdx + 1] || null;
+    const curTag = variantTag(cur);
 
     if (!exListExpanded) {
-      // Collapsed: show current + next only
       list.innerHTML =
         '<div class="ex-collapsed">'
         + '<div class="ex-current">'
         + '<span style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(110,231,183,0.7);margin-right:2px">Nu</span>'
-        + '<span style="flex:1">' + esc(cur.name) + '</span>'
+        + '<span style="flex:1;min-width:0">' + (curTag ? '<span class="var-badge">' + curTag + '</span>' : '') + esc(cur.name) + '</span>'
         + '</div>'
+        + variantSwitchHtml(cur)
         + (next
-          ? '<div class="ex-next"><span class="ex-next-label">Daarna</span><span>' + esc(next.name) + '</span></div>'
+          ? '<div class="ex-next"><span class="ex-next-label">Daarna</span><span>' + esc(labeledName(next)) + '</span></div>'
           : '')
         + '</div>'
-        + '<button class="ex-expand-btn" id="exExpandBtn">'
+        + '<button type="button" class="ex-expand-btn" id="exExpandBtn">'
         + 'Alle oefeningen (' + f.length + ')'
         + ' <span class="ex-expand-arrow">▾</span>'
         + '</button>';
       $('exExpandBtn').addEventListener('click', () => { exListExpanded = true; renderExList(); });
     } else {
-      // Expanded: full draggable list + add/edit buttons + collapse button
       list.innerHTML =
         '<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-bottom:8px">'
-        + '<button class="btn-icon" id="addExBtn" title="Oefening toevoegen" aria-label="Toevoegen"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>'
-        + '<button class="btn-icon" id="editExBtn" title="Bewerken" aria-label="Bewerken"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>'
+        + '<button type="button" class="btn-icon" id="addExBtn" title="Oefening toevoegen" aria-label="Toevoegen"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>'
+        + '<button type="button" class="btn-icon" id="editExBtn" title="Bewerken" aria-label="Bewerken"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>'
         + '</div>'
         + '<div class="ex-list" id="exListInner">'
-        + f.map(e =>
-            '<div class="ex-item' + (e.id===state.currentEx?' active':'') + '" data-id="' + e.id + '">'
-            + '<span class="ex-grip" data-grip>⋮⋮</span>'
-            + '<span class="ex-check">✓</span>'
-            + '<span class="ex-item-name">' + esc(e.name) + '</span>'
-            + '</div>'
-          ).join('')
+        + f.map(exSlotHtml).join('')
         + '</div>'
-        + '<button class="ex-expand-btn open" id="exExpandBtn" style="margin-top:8px">'
+        + '<button type="button" class="ex-expand-btn open" id="exExpandBtn" style="margin-top:8px">'
         + 'Inklappen <span class="ex-expand-arrow">▾</span>'
         + '</button>';
 
-      // wire add/edit buttons (now rendered inside expanded list)
       const addBtn = document.getElementById('addExBtn');
       const editBtn = document.getElementById('editExBtn');
       if (addBtn) addBtn.addEventListener('click', () => openExModal('add'));
-      if (editBtn) editBtn.addEventListener('click', () => { const ex = getCurrentEx(); if (ex) openExModal('edit', ex); });
+      if (editBtn) editBtn.addEventListener('click', () => { const current = getCurrentEx(); if (current) openExModal('edit', current); });
 
-      // tap to select
       $('exListInner').addEventListener('click', e => {
         if (e.target.closest('[data-grip]')) return;
-        const item = e.target.closest('.ex-item');
+        if (e.target.closest('[data-pick-variant]')) return;
+        const item = e.target.closest('.ex-slot');
         if (!item) return;
         state.currentEx = item.dataset.id;
+        editingSetIdx = null;
         exListExpanded = false;
         save(); renderAll();
       });
 
-      // drag to reorder
       initExDrag($('exListInner'));
       $('exExpandBtn').addEventListener('click', () => { exListExpanded = false; renderExList(); });
     }
   }
 
+  function applyDayOrder(newKeys) {
+    const dayId = state.filterDay;
+    const slots = slotsForDay(dayId);
+    const byKey = {};
+    slots.forEach(s => { byKey[s.key] = s.members.slice(); });
+    const ordered = [];
+    const seen = new Set();
+    newKeys.forEach(k => {
+      const members = byKey[k];
+      if (!members || seen.has(k)) return;
+      members.forEach(m => ordered.push(m));
+      seen.add(k);
+    });
+    slots.forEach(s => {
+      if (seen.has(s.key)) return;
+      s.members.forEach(m => ordered.push(m));
+    });
+    let di = 0;
+    const result = [];
+    state.exercises.forEach(x => {
+      if (x && x.day === dayId) result.push(ordered[di++]);
+      else result.push(x);
+    });
+    if (result.some(x => x == null)) return;
+    state.exercises = result;
+  }
   function initExDrag(list) {
     if (!list) return;
     let dragEl = null, dragging = false;
     list.addEventListener('pointerdown', e => {
       const grip = e.target.closest('[data-grip]'); if (!grip) return;
-      const item = grip.closest('.ex-item'); if (!item) return;
+      const item = grip.closest('.ex-slot'); if (!item) return;
       e.preventDefault(); dragEl = item; dragging = true;
       item.classList.add('dragging'); item.setPointerCapture(e.pointerId);
     });
     list.addEventListener('pointermove', e => {
       if (!dragEl) return; e.preventDefault();
-      const items = [...list.querySelectorAll('.ex-item:not(.dragging)')];
+      const items = [...list.querySelectorAll('.ex-slot:not(.dragging)')];
       list.querySelectorAll('.drop-target').forEach(x => x.classList.remove('drop-target'));
       const after = items.find(it => { const r = it.getBoundingClientRect(); return e.clientY < r.top + r.height / 2; });
       if (after) { after.classList.add('drop-target'); list.insertBefore(dragEl, after); }
@@ -1172,12 +1431,8 @@ html, body {
       if (!dragEl) return;
       dragEl.classList.remove('dragging');
       list.querySelectorAll('.drop-target').forEach(x => x.classList.remove('drop-target'));
-      const newOrderIds = [...list.querySelectorAll('.ex-item')].map(x => x.dataset.id);
-      const dayId = state.filterDay;
-      const dayExs = newOrderIds.map(id => state.exercises.find(x => x.id === id)).filter(Boolean);
-      const result = []; let di = 0;
-      state.exercises.forEach(x => { if (x.day === dayId) result.push(dayExs[di++]); else result.push(x); });
-      state.exercises = result;
+      const newKeys = [...list.querySelectorAll('.ex-slot')].map(x => x.dataset.slotKey);
+      applyDayOrder(newKeys);
       dragEl = null;
       save();
       setTimeout(() => { dragging = false; }, 50);
@@ -1187,6 +1442,7 @@ html, body {
   function renderForm() {
     const ex = getCurrentEx();
     $('weightLabel').textContent = 'Gewicht (' + U + ')';
+    if (!ex) return;
     if (ex && ex.bw) {
       $('bwBanner').classList.add('show');
       $('weightField').style.display = 'none';
@@ -1218,12 +1474,13 @@ html, body {
     carousel.innerHTML = html;
     carousel.dataset.value = String(active);
     
-    // Scroll active into view
+    // Scroll inside the carousel only. scrollIntoView also scrolls the page,
+    // which on iPhone jumps away from the variant switch.
     setTimeout(() => {
       const activeBtn = carousel.querySelector('.rep-button.active');
-      if (activeBtn) {
-        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      }
+      if (!activeBtn) return;
+      const left = activeBtn.offsetLeft - (carousel.clientWidth - activeBtn.offsetWidth) / 2;
+      carousel.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
     }, 0);
   }
   
@@ -1368,7 +1625,7 @@ html, body {
 
   function renderThisSession() {
     const ex = getCurrentEx();
-    $('thisExName').textContent = ex ? ex.name : 'deze oefening';
+    $('thisExName').textContent = ex ? labeledName(ex) : 'deze oefening';
     const wrap = $('thisSession');
     const logs = ex ? getLogs() : [];
     const today = dayKey(new Date().toISOString());
@@ -1569,7 +1826,7 @@ html, body {
     if (f.length < 2) return;
     const idx = f.findIndex(e => e.id === state.currentEx);
     const next = f[(idx + 1) % f.length];
-    state.currentEx = next.id; save(); renderAll();
+    state.currentEx = next.id; editingSetIdx = null; save(); renderAll();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
   $('wDown').addEventListener('click', () => { const ex=getCurrentEx(); if(!ex||ex.bw)return; $('wInput').value = Math.max(0,(parseFloat($('wInput').value)||0)-(ex.step||2.5)); });
@@ -1774,6 +2031,8 @@ html, body {
     editingExId = mode==='edit' ? ex.id : null;
     $('exModalTitle').textContent = mode==='edit' ? 'Oefening bewerken' : 'Oefening toevoegen';
     $('exDelete').style.display = mode==='edit' ? 'block' : 'none';
+    const multi = mode==='edit' && membersOf(ex).length > 1;
+    $('exDelete').textContent = multi ? 'Deze variant verwijderen' : 'Deze oefening verwijderen';
     pendingPhoto = undefined;
     if (mode==='edit') {
       $('exName').value = ex.name; modalDay = ex.day;
@@ -1782,12 +2041,14 @@ html, body {
       $('exRepMin').value = ex.repMin; $('exRepMax').value = ex.repMax; $('exStep').value = ex.step;
       $('exNote').value = ex.note || '';
       setPhotoPreview(ex.photo || '');
+      renderEditVariants(ex);
     } else {
       $('exName').value = ''; modalDay = state.filterDay;
       $('exBw').checked = false; $('exStartWeight').value = '';
       $('exRepMin').value = 6; $('exRepMax').value = 10; $('exStep').value = 2.5;
       $('exNote').value = '';
       setPhotoPreview('');
+      renderEditVariants(null);
     }
     // collapse "more options" by default
     $('moreBody').classList.remove('show');
@@ -1849,7 +2110,20 @@ html, body {
     let target;
     if (editingExId) {
       target = state.exercises.find(e => e.id === editingExId);
-      if (target) Object.assign(target, data);
+      if (target) {
+        const prevDay = target.day;
+        Object.assign(target, data);
+        // Varianten van één slot blijven bij elkaar op dezelfde dag.
+        if (data.day !== prevDay) {
+          const slot = slotIdOf(target);
+          if (slot) {
+            state.exercises.forEach(e => {
+              if (e && e !== target && e.day === prevDay && slotIdOf(e) === slot) e.day = data.day;
+            });
+          }
+          if (state.filterDay === prevDay) state.filterDay = data.day;
+        }
+      }
     } else {
       target = Object.assign({ id: uid() }, data);
       state.exercises.push(target); state.currentEx = target.id; state.filterDay = modalDay;
@@ -1870,13 +2144,221 @@ html, body {
   });
   $('exDelete').addEventListener('click', () => {
     if (!editingExId) return;
-    showConfirmModal('Deze oefening en al zijn sets verwijderen?', (ok) => {
+    const ex = state.exercises.find(e => e && e.id === editingExId);
+    const multi = ex && membersOf(ex).length > 1;
+    const msg = multi
+      ? 'Alleen deze variant en zijn sets verwijderen? De andere varianten blijven staan.'
+      : 'Deze oefening en al zijn sets verwijderen?';
+    showConfirmModal(msg, (ok) => {
       if (!ok) return;
-      state.exercises = state.exercises.filter(e => e.id !== editingExId);
-      delete state.logs[editingExId];
-      if (state.currentEx === editingExId) state.currentEx = null;
-      editingExId = null; save(); $('exModalBg').classList.remove('show'); renderAll();
+      const id = editingExId;
+      $('exModalBg').classList.remove('show');
+      removeVariantExercise(id);
     });
+  });
+
+  // ---------- varianten ----------
+  let variantSourceId = null;
+
+  function renderEditVariants(ex) {
+    const box = $('exVariantBox');
+    if (!box) return;
+    if (!ex) { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    const members = membersOf(ex);
+    let rows;
+    if (members.length < 2) {
+      rows = '<p class="modal-note" style="margin:0 0 8px">Nog geen alternatief. Voeg een variant toe voor als het apparaat bezet is. Elke variant houdt eigen gewicht en sets.</p>';
+    } else {
+      rows = '<div class="var-manage">' + members.map((m, i) =>
+        '<div class="var-manage-row">'
+        + '<span class="var-letter">' + letterFor(i) + '</span>'
+        + '<span class="var-manage-name">' + esc(m.name) + (m.id === ex.id ? ' · dit' : '') + '</span>'
+        + '<button type="button" class="var-remove" data-remove-variant="' + esc(m.id) + '">Verwijderen</button>'
+        + '</div>'
+      ).join('') + '</div>';
+    }
+    box.innerHTML = '<div class="field"><label>Varianten</label>' + rows
+      + '<button type="button" class="btn-secondary" id="exAddVariantBtn" style="width:100%;min-height:44px">+ Variant toevoegen</button></div>';
+  }
+  function renderVariantExisting(source) {
+    const ex = source || state.exercises.find(e => e && e.id === variantSourceId);
+    const wrap = $('varExisting');
+    const hint = $('varNextHint');
+    if (!ex) { if (wrap) wrap.innerHTML = ''; return; }
+    const members = membersOf(ex);
+    if (hint) {
+      hint.textContent = 'Dit wordt variant ' + letterFor(members.length)
+        + '. Sets blijven apart van ' + members.map(m => m.name).join(' / ') + '.';
+    }
+    if (!wrap) return;
+    if (members.length < 2) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = '<div class="field"><label>Huidige varianten</label><div class="var-manage">'
+      + members.map((m, i) =>
+          '<div class="var-manage-row">'
+          + '<span class="var-letter">' + letterFor(i) + '</span>'
+          + '<span class="var-manage-name">' + esc(m.name) + '</span>'
+          + '<button type="button" class="var-remove" data-remove-variant="' + esc(m.id) + '">Verwijderen</button>'
+          + '</div>'
+        ).join('')
+      + '</div></div>';
+  }
+  function openVariantModal(ex) {
+    if (!ex) return;
+    variantSourceId = ex.id;
+    const members = membersOf(ex);
+    $('varModalTitle').textContent = 'Variant ' + letterFor(members.length) + ' toevoegen';
+    $('varName').value = '';
+    $('varStart').value = ex.bw ? '' : (ex.startWeight || '');
+    $('varRepMin').value = ex.repMin || 8;
+    $('varRepMax').value = ex.repMax || 12;
+    $('varStep').value = ex.step || 2.5;
+    $('varWeightField').style.display = ex.bw ? 'none' : '';
+    $('varStepField').style.display = ex.bw ? 'none' : '';
+    renderVariantExisting(ex);
+    $('varModalBg').classList.add('show');
+    const nameInput = $('varName');
+    if (nameInput) nameInput.focus();
+  }
+  function addVariant(source, data) {
+    let slot = slotIdOf(source);
+    if (!slot) {
+      slot = 'sl_' + (source.id || uid());
+      source.slot = slot;
+    }
+    const variant = {
+      id: uid(),
+      name: data.name,
+      day: source.day,
+      bw: !!source.bw,
+      startWeight: source.bw ? 0 : data.startWeight,
+      repMin: data.repMin,
+      repMax: data.repMax,
+      step: source.bw ? 1 : data.step,
+      slot: slot
+    };
+    let last = -1;
+    state.exercises.forEach((e, i) => {
+      if (e && e.day === source.day && slotIdOf(e) === slot) last = i;
+    });
+    if (last < 0) state.exercises.push(variant);
+    else state.exercises.splice(last + 1, 0, variant);
+    state.currentEx = variant.id;
+    state.filterDay = source.day;
+    rememberChoice(variant);
+    editingSetIdx = null;
+    save();
+    return variant;
+  }
+  function removeVariantExercise(exId) {
+    const ex = state.exercises.find(e => e && e.id === exId);
+    if (!ex) return;
+    const slot = slotIdOf(ex);
+    const siblings = membersOf(ex).filter(m => m.id !== exId);
+    state.exercises = state.exercises.filter(e => e && e.id !== exId);
+    if (state.logs && Object.prototype.hasOwnProperty.call(state.logs, exId)) delete state.logs[exId];
+    if (slot && state.variantChoice && typeof state.variantChoice === 'object' && state.variantChoice[slot] === exId) {
+      if (siblings.length) state.variantChoice[slot] = siblings[0].id;
+      else delete state.variantChoice[slot];
+    }
+    if (state.currentEx === exId) {
+      state.currentEx = siblings.length
+        ? ((state.variantChoice && state.variantChoice[slot]) || siblings[0].id)
+        : null;
+    }
+    if (editingExId === exId) editingExId = null;
+    editingSetIdx = null;
+    save();
+    renderAll();
+  }
+  function refreshOpenVariantUi() {
+    if ($('exModalBg').classList.contains('show') && editingExId) {
+      const ex = state.exercises.find(e => e && e.id === editingExId);
+      if (ex) renderEditVariants(ex);
+      else $('exModalBg').classList.remove('show');
+    }
+    if ($('varModalBg').classList.contains('show')) {
+      const src = state.exercises.find(e => e && e.id === variantSourceId);
+      if (!src) $('varModalBg').classList.remove('show');
+      else {
+        const members = membersOf(src);
+        $('varModalTitle').textContent = 'Variant ' + letterFor(members.length) + ' toevoegen';
+        renderVariantExisting(src);
+      }
+    }
+  }
+  function confirmRemoveVariant(exId) {
+    const ex = state.exercises.find(e => e && e.id === exId);
+    if (!ex) return;
+    const members = membersOf(ex);
+    if (members.length < 2) {
+      showAlertModal('Dit is de enige variant. Verwijder de oefening via bewerken als je hem kwijt wilt.');
+      return;
+    }
+    const idx = members.findIndex(m => m.id === exId);
+    showConfirmModal(
+      'Variant ' + letterFor(idx) + ' (' + ex.name + ') en alleen de sets van deze variant verwijderen? De andere varianten blijven staan.',
+      (ok) => {
+        if (!ok) return;
+        const sibling = members.find(m => m.id !== exId);
+        if (variantSourceId === exId && sibling) variantSourceId = sibling.id;
+        const closedEditor = editingExId === exId;
+        removeVariantExercise(exId);
+        if (closedEditor) $('exModalBg').classList.remove('show');
+        refreshOpenVariantUi();
+      }
+    );
+  }
+
+  $('exVariantBox').addEventListener('click', e => {
+    const rm = e.target.closest('[data-remove-variant]');
+    if (rm) { confirmRemoveVariant(rm.dataset.removeVariant); return; }
+    if (e.target.closest('#exAddVariantBtn')) {
+      const ex = state.exercises.find(x => x.id === editingExId) || getCurrentEx();
+      if (ex) openVariantModal(ex);
+    }
+  });
+  $('varExisting').addEventListener('click', e => {
+    const rm = e.target.closest('[data-remove-variant]');
+    if (rm) confirmRemoveVariant(rm.dataset.removeVariant);
+  });
+  $('addVariantBtn').addEventListener('click', () => {
+    const ex = getCurrentEx();
+    if (!ex) { showAlertModal('Kies eerst een oefening.'); return; }
+    openVariantModal(ex);
+  });
+  $('exList').addEventListener('click', e => {
+    const pick = e.target.closest('[data-pick-variant]');
+    if (!pick) return;
+    selectVariant(pick.dataset.pickVariant);
+  });
+  $('varCancel').addEventListener('click', () => $('varModalBg').classList.remove('show'));
+  $('varModalBg').addEventListener('click', e => { if (e.target === $('varModalBg')) $('varModalBg').classList.remove('show'); });
+  $('varName').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); $('varSave').click(); }
+  });
+  $('varSave').addEventListener('click', () => {
+    const source = state.exercises.find(e => e && e.id === variantSourceId);
+    if (!source) { $('varModalBg').classList.remove('show'); return; }
+    const name = $('varName').value.trim();
+    if (!name) { showAlertModal('Naam is verplicht.'); return; }
+    let repMin = parseInt($('varRepMin').value, 10);
+    let repMax = parseInt($('varRepMax').value, 10);
+    if (!repMin || repMin < 1) repMin = source.repMin || 8;
+    if (!repMax || repMax < 1) repMax = source.repMax || 12;
+    if (repMin > repMax) { const t = repMin; repMin = repMax; repMax = t; }
+    const sw = parseFloat($('varStart').value);
+    const step = parseFloat($('varStep').value);
+    addVariant(source, {
+      name: name,
+      startWeight: isNaN(sw) ? 0 : Math.max(0, sw),
+      repMin: repMin,
+      repMax: repMax,
+      step: (!isNaN(step) && step > 0) ? step : (source.step || 2.5)
+    });
+    $('varModalBg').classList.remove('show');
+    $('exModalBg').classList.remove('show');
+    renderAll();
   });
 
   // ---------- settings ----------
