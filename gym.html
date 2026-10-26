@@ -1108,6 +1108,19 @@ html, body {
   function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {} }
   function saveOrThrow() { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
   let state = load();
+  // Optional { dayName: "#rrggbb" }. Oude data heeft dit veld niet.
+  // De kalender vult het; andere code laat het staan.
+  window.__maxxGymRememberColors = function (map) {
+    if (!map || typeof map !== 'object' || Array.isArray(map)) return;
+    const keys = Object.keys(map);
+    if (!keys.length) return;
+    const prev = (state.dayColors && typeof state.dayColors === 'object' && !Array.isArray(state.dayColors)) ? state.dayColors : null;
+    if (prev && Object.keys(prev).length === keys.length && keys.every(k => prev[k] === map[k])) return;
+    const next = {};
+    keys.forEach(k => { next[k] = map[k]; });
+    state.dayColors = next;
+    save();
+  };
 
   // ---------- helpers ----------
   function uid() { return 'ex_' + Date.now() + '_' + Math.floor(Math.random()*9999); }
@@ -2471,9 +2484,105 @@ html, body {
 
 (function() {
   const GYM_KEY='maxx_gym_v1';
-  const PALETTE=['#f0883e','#7DD3FC','#fbbf24','#B794F4','#ff8a8a','#f0883e'];
-  const typeColors={};let colorIdx=0;
-  function colorFor(n){const k=n||'?';if(!typeColors[k]){typeColors[k]=PALETTE[colorIdx%PALETTE.length];colorIdx++;}return typeColors[k];}
+  // Eerste swatches: de oude reeks, maar zonder de herhaalde oranje.
+  // Daarna vrije kleuren. Elke naam houdt de zijne via dayColors.
+  const CURATED=['#f0883e','#7dd3fc','#fbbf24','#b794f4','#ff8a8a','#3ddc97','#d9f25a','#a5b4fc','#f9a8d4','#e879f9'];
+  const typeColors={};
+  function oklchToHex(L,C,H){
+    let c=C;
+    for(let i=0;i<24;i++){
+      const h=H*Math.PI/180, a=c*Math.cos(h), b=c*Math.sin(h);
+      const l_=L+0.3963377774*a+0.2158037573*b;
+      const m_=L-0.1055613458*a-0.0638541728*b;
+      const s_=L-0.0894841775*a-1.2914855480*b;
+      const l=l_*l_*l_, m=m_*m_*m_, s=s_*s_*s_;
+      const r=4.0767416621*l-3.3077115913*m+0.2309699292*s;
+      const g=-1.2684380046*l+2.6097574011*m-0.3413193965*s;
+      const bl=-0.0041960863*l-0.7034186147*m+1.7076147010*s;
+      if(r>=-1e-3&&r<=1+1e-3&&g>=-1e-3&&g<=1+1e-3&&bl>=-1e-3&&bl<=1+1e-3){
+        const enc=x=>{x=Math.min(1,Math.max(0,x)); const v=x<=0.0031308?12.92*x:1.055*Math.pow(x,1/2.4)-0.055; return Math.round(Math.min(1,Math.max(0,v))*255);};
+        const hh=n=>enc(n).toString(16).padStart(2,'0');
+        return '#'+hh(r)+hh(g)+hh(bl);
+      }
+      c*=0.94;
+    }
+    const v=Math.round(Math.min(1,Math.max(0,L))*255).toString(16).padStart(2,'0');
+    return '#'+v+v+v;
+  }
+  function hexToOklab(hex){
+    const n=parseInt(hex.slice(1),16);
+    const lin=c=>{c/=255; return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4);};
+    const R=lin((n>>16)&255), G=lin((n>>8)&255), B=lin(n&255);
+    const l=Math.cbrt(0.4122214708*R+0.5363325363*G+0.0514459929*B);
+    const m=Math.cbrt(0.2119034982*R+0.6806995451*G+0.1073969566*B);
+    const s=Math.cbrt(0.0883024619*R+0.2817188376*G+0.6299787005*B);
+    return [
+      0.2104542553*l+0.7936177850*m-0.0040720468*s,
+      1.9779984951*l-2.4285922050*m+0.4505937099*s,
+      0.0259040371*l+0.7827717662*m-0.8086757660*s
+    ];
+  }
+  function labDist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);}
+  function generated(n){
+    const hue=(n*137.50776405003785)%360;
+    const band=Math.floor(n/48);
+    const L=0.74+(band%5)*0.025;
+    const C=0.12+(Math.floor(band/5)%3)*0.025;
+    return oklchToHex(L,C,hue);
+  }
+  // Eerste vrije curated swatch, daarna de kandidaat die het verst van
+  // alle gebruikte kleuren af ligt. Zo blijft een nieuwe dag leesbaar
+  // en botst hij niet op een bestaande groep.
+  function pickColor(used){
+    for(let i=0;i<CURATED.length;i++) if(!used.has(CURATED[i])) return CURATED[i];
+    const labs=[...used].map(hexToOklab);
+    let best=null, bestD=-1;
+    for(let n=0;n<2048;n++){
+      const c=generated(n);
+      if(!c || used.has(c)) continue;
+      const lab=hexToOklab(c);
+      let minD=Infinity;
+      for(let i=0;i<labs.length;i++){
+        const d=labDist(lab,labs[i]);
+        if(d<minD) minD=d;
+        if(minD<=bestD) break;
+      }
+      if(minD>bestD){ bestD=minD; best=c; }
+    }
+    if(best) return best;
+    for(let n=2048;n<8192;n++){ const c=generated(n); if(c&&!used.has(c)) return c; }
+    return '#e7e5e4';
+  }
+  function validHex(c){return (typeof c==='string' && /^#[0-9a-fA-F]{6}$/.test(c)) ? c.toLowerCase() : '';}
+  function dayKey(n){return n?String(n):'?';}
+  function assignDayColors(gym,sessions){
+    const order=[]; const seen=new Set();
+    const add=n=>{const k=dayKey(n); if(seen.has(k)) return; seen.add(k); order.push(k);};
+    if(gym&&Array.isArray(gym.days)) gym.days.forEach(d=>add(d&&d.name));
+    const extra=[]; const extraSeen=new Set();
+    (sessions||[]).forEach(s=>{
+      const k=dayKey(s&&s.dayName);
+      if(seen.has(k)||extraSeen.has(k)) return;
+      extraSeen.add(k); extra.push(k);
+    });
+    extra.sort((a,b)=>a<b?-1:a>b?1:0);
+    extra.forEach(add);
+    const stored=(gym&&gym.dayColors&&typeof gym.dayColors==='object'&&!Array.isArray(gym.dayColors))?gym.dayColors:{};
+    const map={}; const used=new Set();
+    Object.keys(stored).sort().forEach(n=>{
+      const c=validHex(stored[n]);
+      if(c&&!used.has(c)){ map[n]=c; used.add(c); }
+    });
+    order.forEach(n=>{
+      if(map[n]) return;
+      const c=pickColor(used);
+      map[n]=c; used.add(c);
+    });
+    Object.keys(typeColors).forEach(k=>delete typeColors[k]);
+    order.forEach(n=>{ typeColors[n]=map[n]; });
+    if(window.__maxxGymRememberColors) window.__maxxGymRememberColors(map);
+  }
+  function colorFor(n){const k=dayKey(n); if(!typeColors[k]) typeColors[k]=pickColor(new Set(Object.values(typeColors))); return typeColors[k];}
   function loadGym(){try{const r=localStorage.getItem(GYM_KEY);if(r)return JSON.parse(r);}catch(e){}return null;}
   function dKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -2484,7 +2593,7 @@ html, body {
   function sow(d){const x=new Date(d);x.setDate(x.getDate()-(x.getDay()+6)%7);x.setHours(0,0,0,0);return x;}
   window.renderKalTab=function(){
     const gym=loadGym();const sessions=(gym&&Array.isArray(gym.sessions))?gym.sessions:[];
-    if(gym&&Array.isArray(gym.days))gym.days.forEach(d=>colorFor(d.name));
+    assignDayColors(gym,sessions);
     const byDate={};sessions.forEach(s=>{const k=dKey(new Date(s.date));(byDate[k]=byDate[k]||[]).push(s);});
     const totalMin=sessions.reduce((a,s)=>a+(s.durationMin||0),0);
     function wkStreak(){const wof=d=>{const x=new Date(d);x.setDate(x.getDate()-(x.getDay()+6)%7);x.setHours(0,0,0,0);return x.getTime();};const wks=new Set(sessions.map(s=>wof(new Date(s.date))));let str=0,cur=wof(new Date());if(!wks.has(cur))cur-=7*86400000;while(wks.has(cur)){str++;cur-=7*86400000;}return str;}
