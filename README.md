@@ -145,6 +145,6 @@ Append finished workouts. Do not replace the array.
 | Field | Meaning |
 | --- | --- |
 | `extras.calves` | `true` when calves (kuiten) were trained that session. The calendar keeps the training-group color and adds a white dot in the top-right. |
-| `extras.forearms` | `true` when forearms (onderarmen) were trained. Blue dot, bottom-left. |
+| `extras.forearms` | `true` when forearms (onderarmen) were trained. Blue dot, top-left. |
 
 Any value other than `true` means not trained. No training group sets these by itself. When a flag is turned off, delete that key. If `extras` is then empty, omit it. Leave any other keys already on `extras`.
