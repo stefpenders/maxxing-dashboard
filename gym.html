@@ -742,18 +742,115 @@ html, body {
 .kal-dow { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; margin-bottom: 3px; }
 .kal-dow span { text-align: center; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: rgba(255,255,255,0.22); text-transform: uppercase; }
 .kal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
-.kal-cell { aspect-ratio: 1; border-radius: 6px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; }
+.kal-cell { position: relative; overflow: hidden; aspect-ratio: 1; border-radius: 6px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; }
 .kal-cell.empty { background: transparent; border: none; }
 .kal-cell.today { border-color: rgba(125,211,252,0.4); }
-.kal-day { font-size: 10px; color: rgba(255,255,255,0.35); font-weight: 600; }
+.kal-day { position: relative; z-index: 1; font-size: 10px; color: rgba(255,255,255,0.35); font-weight: 600; }
 .kal-week-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
-.kal-week-cell { border-radius: 8px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 6px 4px; min-height: 60px; }
+.kal-week-cell { position: relative; overflow: hidden; border-radius: 8px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 6px 14px 16px; min-height: 64px; }
 .kal-week-cell.today { border-color: rgba(125,211,252,0.4); }
 .kal-week-dow { font-size: 8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255,255,255,0.22); }
 .kal-week-day { font-size: 13px; font-weight: 700; color: #fff; margin: 2px 0 3px; }
 .kal-week-tag { font-size: 8px; padding: 1px 3px; border-radius: 3px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kal-year-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(10px,1fr)); gap: 2px; }
-.kal-year-cell { aspect-ratio: 1; border-radius: 2px; background: rgba(255,255,255,0.04); }
+.kal-year-cell { position: relative; overflow: hidden; aspect-ratio: 1; border-radius: 2px; background: rgba(255,255,255,0.04); }
+/* Kuiten = witte stip rechtsboven. Onderarmen = blauwe stip linksonder.
+   De dagkleur zelf blijft de trainingsgroep. Blauw staat niet in dayColors. */
+.kal-mark {
+  position: absolute; width: 8px; height: 8px; border-radius: 50%;
+  pointer-events: none; z-index: 2;
+}
+.kal-mark-calves { top: 4px; right: 4px; background: #fff; box-shadow: 0 0 0 1.5px rgba(10,10,11,0.55); }
+.kal-mark-fore { bottom: 4px; left: 4px; background: #2563eb; box-shadow: 0 0 0 1.5px #fff; }
+.kal-cell .kal-mark { width: 7px; height: 7px; }
+.kal-cell .kal-mark-calves { top: 3px; right: 3px; }
+.kal-cell .kal-mark-fore { bottom: 3px; left: 3px; }
+.kal-year-cell .kal-mark { width: 4px; height: 4px; box-shadow: none; }
+.kal-year-cell .kal-mark-calves { top: 1px; right: 1px; }
+.kal-year-cell .kal-mark-fore { bottom: 1px; left: 1px; background: #1d4ed8; }
+.kal-cell[data-kalday], .kal-week-cell[data-kalday], .kal-year-cell[data-kalday] {
+  cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.kal-cell[data-kalday]:focus-visible, .kal-week-cell[data-kalday]:focus-visible {
+  outline: 2px solid #fff; outline-offset: 1px;
+}
+@media (min-width: 520px) {
+  .kal-cell .kal-mark { width: 9px; height: 9px; }
+  .kal-cell .kal-mark-calves { top: 4px; right: 4px; }
+  .kal-cell .kal-mark-fore { bottom: 4px; left: 4px; }
+}
+.kal-extra-legend {
+  display: flex; flex-wrap: wrap; gap: 10px 14px;
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.kal-leg-item { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: rgba(255,255,255,0.6); }
+.kal-leg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.kal-leg-calves { background: #fff; box-shadow: 0 0 0 1.5px rgba(10,10,11,0.55); }
+.kal-leg-fore { background: #2563eb; box-shadow: 0 0 0 1.5px rgba(255,255,255,0.85); }
+.kal-extra-hint { margin-top: 8px; font-size: 11px; line-height: 1.4; color: rgba(255,255,255,0.38); }
+.extra-toggle {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: 48px; padding: 10px 12px;
+  border-radius: 12px; border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.78);
+  font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  text-align: left; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.extra-toggle[aria-pressed="true"] {
+  border-color: rgba(255,255,255,0.72); background: rgba(255,255,255,0.08); color: #fff;
+}
+.extra-toggle::after {
+  content: ''; margin-left: auto; flex-shrink: 0;
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.28);
+}
+.extra-toggle[aria-pressed="true"]::after {
+  content: '✓'; display: flex; align-items: center; justify-content: center;
+  background: #fff; color: #0a0a0b; border-color: #fff;
+  font-size: 12px; font-weight: 800; line-height: 1;
+}
+.extra-swatch {
+  width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
+  position: relative; overflow: hidden; background: #f0883e;
+}
+.extra-swatch-calves::after, .extra-swatch-fore::after {
+  content: ''; position: absolute; width: 7px; height: 7px; border-radius: 50%;
+}
+.extra-swatch-calves::after { top: 2px; right: 2px; background: #fff; box-shadow: 0 0 0 1px rgba(10,10,11,0.45); }
+.extra-swatch-fore::after { bottom: 2px; left: 2px; background: #2563eb; box-shadow: 0 0 0 1px #fff; }
+.end-extras { display: flex; flex-direction: column; gap: 8px; margin: 0 0 16px; }
+.end-extras-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.12em;
+  text-transform: uppercase; color: rgba(255,255,255,0.4); text-align: left;
+}
+#kalDayModal { z-index: 1100; align-items: flex-end; padding: 0; }
+.kal-day-sheet {
+  width: 100%; max-width: 480px; margin: 0 auto;
+  background: #111113; border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 18px 18px 0 0; padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
+  max-height: min(88vh, 640px); overflow-y: auto;
+}
+.kal-day-kicker { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); }
+.kal-day-title { font-size: 22px; font-weight: 700; margin: 4px 0 14px; letter-spacing: -0.02em; }
+.kal-day-card {
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  border-radius: 14px; padding: 12px; margin-bottom: 10px;
+}
+.kal-day-name { font-size: 15px; font-weight: 700; line-height: 1.3; }
+.kal-day-meta { font-size: 12px; color: var(--text-3); margin: 3px 0 10px; }
+.kal-day-toggles { display: flex; flex-direction: column; gap: 8px; }
+.kal-day-close {
+  width: 100%; min-height: 48px; margin-top: 4px;
+  border-radius: 12px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-2);
+  font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+@media (min-width: 640px) {
+  #kalDayModal { align-items: center; padding: 20px; }
+  .kal-day-sheet { border-radius: 18px; padding: 20px; }
+}
 .hidden { display: none !important; }
 
 /* Collapsible "more options" in modal */
@@ -1097,7 +1194,8 @@ html, body {
     s.filterDay = s.filterDay || s.days[0].id;
     s.currentEx = s.currentEx || null;
     s.session = (s.session && typeof s.session === 'object') ? s.session : null;  // { startedAt }
-    s.sessions = Array.isArray(s.sessions) ? s.sessions : [];  // [{ date, startedAt, endedAt, durationMin, sets }]
+    // extras is optioneel: { calves?: true, forearms?: true }. Oude sessies zonder het veld blijven geldig.
+    s.sessions = Array.isArray(s.sessions) ? s.sessions : [];  // [{ date, startedAt, endedAt, durationMin, sets, dayId, dayName, extras? }]
     // variantChoice: { slotId: exerciseId } van de laatst gekozen variant.
     // Afwezig laten als de data het nog niet heeft, zodat oude staat gelijk blijft.
     if (s.variantChoice != null && (typeof s.variantChoice !== 'object' || Array.isArray(s.variantChoice))) {
@@ -1107,6 +1205,56 @@ html, body {
   }
   function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {} }
   function saveOrThrow() { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+  // Alleen true telt. Geen trainingsgroep (ook Core niet) zet een marker vanzelf.
+  function sessionShowsExtra(s, key) {
+    return !!(s && s.extras && typeof s.extras === 'object' && !Array.isArray(s.extras) && s.extras[key] === true);
+  }
+  function sessionShowsCalves(s) { return sessionShowsExtra(s, 'calves'); }
+  function sessionShowsForearms(s) { return sessionShowsExtra(s, 'forearms'); }
+  function applyExtra(hit, key, on) {
+    if (key !== 'calves' && key !== 'forearms') return;
+    let extras = (hit.extras && typeof hit.extras === 'object' && !Array.isArray(hit.extras)) ? hit.extras : null;
+    if (on) {
+      if (!extras) extras = {};
+      extras[key] = true;
+      hit.extras = extras;
+      return;
+    }
+    if (!extras) return;
+    delete extras[key];
+    if (!Object.keys(extras).length) delete hit.extras;
+  }
+  function idEq(a, b) {
+    const as = (a == null || a === '') ? '' : String(a);
+    const bs = (b == null || b === '') ? '' : String(b);
+    return as === bs;
+  }
+  function findSessionById(id) {
+    const list = state.sessions || [];
+    if (!id) return null;
+    const idx = typeof id.index === 'number' ? id.index : parseInt(id.index, 10);
+    if (list[idx] && idEq(list[idx].date, id.date) && idEq(list[idx].startedAt, id.startedAt) && idEq(list[idx].endedAt, id.endedAt)) {
+      return list[idx];
+    }
+    for (let i = 0; i < list.length; i++) {
+      const s = list[i];
+      if (s && idEq(s.date, id.date) && idEq(s.startedAt, id.startedAt) && idEq(s.endedAt, id.endedAt)) return s;
+    }
+    return null;
+  }
+  window.__maxxGymExtras = {
+    showsCalves: sessionShowsCalves,
+    showsFore: sessionShowsForearms
+  };
+  window.__maxxGymSetExtras = function (id, patch) {
+    const hit = findSessionById(id);
+    if (!hit || !patch) return false;
+    if (typeof patch.calves === 'boolean') applyExtra(hit, 'calves', patch.calves);
+    if (typeof patch.forearms === 'boolean') applyExtra(hit, 'forearms', patch.forearms);
+    save();
+    renderSessions();
+    return true;
+  };
   let state = load();
   // Optional { dayName: "#rrggbb" }. Oude data heeft dit veld niet.
   // De kalender vult het; andere code laat het staan.
@@ -1715,9 +1863,14 @@ html, body {
       const d = new Date(s.date);
       const dStr = d.getDate() + '/' + (d.getMonth()+1);
       const realIdx = list.length - 1 - i;
+      const tags = [];
+      if (sessionShowsCalves(s)) tags.push('kuiten');
+      if (sessionShowsForearms(s)) tags.push('onderarmen');
       return '<div class="hist-row"><div class="hist-date">' + dStr + '</div>'
         + '<div><span class="hist-set">' + (s.durationMin >= 60 ? Math.floor(s.durationMin/60)+'u '+(s.durationMin%60)+'m' : s.durationMin + ' min') + '</span> '
-        + '<span class="hist-rpe">' + (s.sets||0) + ' sets</span></div>'
+        + '<span class="hist-rpe">' + (s.sets||0) + ' sets</span>'
+        + (tags.length ? ' <span class="hist-rpe">' + tags.join(' · ') + '</span>' : '')
+        + '</div>'
         + '<button class="hist-del" data-sidx="' + realIdx + '" aria-label="Verwijderen">×</button></div>';
     }).join('');
     wrap.querySelectorAll('.hist-del').forEach(b => {
@@ -1886,6 +2039,12 @@ html, body {
     $('endStats_duration').textContent = durStr;
     $('endStats_sets').textContent = (state.session.setCount || 0) + ' sets';
     $('endStats_day').textContent = dayObj ? dayObj.name : 'Training';
+    const calvesToggle = $('endCalvesToggle');
+    const foreToggle = $('endForeToggle');
+    bindExtraToggle(calvesToggle);
+    bindExtraToggle(foreToggle);
+    if (calvesToggle) calvesToggle.setAttribute('aria-pressed', 'false');
+    if (foreToggle) foreToggle.setAttribute('aria-pressed', 'false');
     
     $('sessionEndModal').style.display = 'flex';
     
@@ -1902,6 +2061,10 @@ html, body {
     
     // Confirm button
     const confirmHandler = () => {
+      const extras = {};
+      if (calvesToggle && calvesToggle.getAttribute('aria-pressed') === 'true') extras.calves = true;
+      if (foreToggle && foreToggle.getAttribute('aria-pressed') === 'true') extras.forearms = true;
+      if (Object.keys(extras).length) sessionData.extras = extras;
       state.sessions.push(sessionData);
       state.session = null;
       save();
@@ -1918,6 +2081,14 @@ html, body {
     $('endConfirmBtn').onclick = confirmHandler;
     $('endCancelBtn').onclick = cancelHandler;
   });
+  function bindExtraToggle(btn) {
+    if (!btn || btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', () => {
+      const on = btn.getAttribute('aria-pressed') === 'true';
+      btn.setAttribute('aria-pressed', on ? 'false' : 'true');
+    });
+  }
   // tick the live session time every 30s
   setInterval(() => { if (state.session) { renderSession(); renderWoProgress(); } }, 30000);
   // ---------- rest timer ----------
@@ -2591,6 +2762,47 @@ html, body {
   const MON=['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
   const MONS=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
   function sow(d){const x=new Date(d);x.setDate(x.getDate()-(x.getDay()+6)%7);x.setHours(0,0,0,0);return x;}
+  function showsCalves(s) {
+    if (window.__maxxGymExtras && window.__maxxGymExtras.showsCalves) return window.__maxxGymExtras.showsCalves(s);
+    return !!(s && s.extras && s.extras.calves === true);
+  }
+  function showsFore(s) {
+    if (window.__maxxGymExtras && window.__maxxGymExtras.showsFore) return window.__maxxGymExtras.showsFore(s);
+    return !!(s && s.extras && s.extras.forearms === true);
+  }
+  function dayFlags(ss) {
+    let calves = false, fore = false;
+    (ss || []).forEach(function (s) {
+      if (showsCalves(s)) calves = true;
+      if (showsFore(s)) fore = true;
+    });
+    return { calves: calves, fore: fore };
+  }
+  function marksHTML(flags) {
+    let h = '';
+    if (flags.calves) h += '<span class="kal-mark kal-mark-calves" aria-hidden="true"></span>';
+    if (flags.fore) h += '<span class="kal-mark kal-mark-fore" aria-hidden="true"></span>';
+    return h;
+  }
+  function dayLabel(k, ss, flags) {
+    const p = String(k || '').split('-');
+    const when = p.length === 3 ? (parseInt(p[2], 10) + ' ' + (MON[parseInt(p[1], 10) - 1] || '') + ' ' + p[0]) : k;
+    const names = [];
+    (ss || []).forEach(function (s) {
+      const n = s && s.dayName;
+      if (n && names.indexOf(n) === -1) names.push(n);
+    });
+    const bits = [when];
+    if (names.length) bits.push(names.join(', '));
+    if (flags.calves) bits.push('kuiten');
+    if (flags.fore) bits.push('onderarmen');
+    return bits.join(', ');
+  }
+  function dayBtnAttrs(k, ss, flags, tab) {
+    if (!ss || !ss.length) return '';
+    const label = dayLabel(k, ss, flags);
+    return ' data-kalday="' + k + '" role="button" tabindex="' + (tab ? '0' : '-1') + '" title="' + esc(label) + '" aria-label="' + esc(label) + '"';
+  }
   window.renderKalTab=function(){
     const gym=loadGym();const sessions=(gym&&Array.isArray(gym.sessions))?gym.sessions:[];
     assignDayColors(gym,sessions);
@@ -2599,10 +2811,55 @@ html, body {
     function wkStreak(){const wof=d=>{const x=new Date(d);x.setDate(x.getDate()-(x.getDay()+6)%7);x.setHours(0,0,0,0);return x.getTime();};const wks=new Set(sessions.map(s=>wof(new Date(s.date))));let str=0,cur=wof(new Date());if(!wks.has(cur))cur-=7*86400000;while(wks.has(cur)){str++;cur-=7*86400000;}return str;}
     function getSP(){const y=kalCursor.getFullYear(),m=kalCursor.getMonth();if(kalView==='week'){const s=sow(kalCursor);const e=new Date(s);e.setDate(e.getDate()+7);return sessions.filter(s=>{const d=new Date(s.date);return d>=s&&d<e;});}if(kalView==='month')return sessions.filter(s=>{const d=new Date(s.date);return d.getFullYear()===y&&d.getMonth()===m;});return sessions.filter(s=>new Date(s.date).getFullYear()===y);}
     function perLbl(){if(kalView==='week'){const s=sow(kalCursor);const e=new Date(s);e.setDate(e.getDate()+6);return s.getDate()+' '+MONS[s.getMonth()]+' – '+e.getDate()+' '+MONS[e.getMonth()];}if(kalView==='month')return MON[kalCursor.getMonth()]+' '+kalCursor.getFullYear();return String(kalCursor.getFullYear());}
-    function calHTML(){const today=dKey(new Date());
-      if(kalView==='week'){const start=sow(kalCursor);let c='';for(let i=0;i<7;i++){const d=new Date(start);d.setDate(d.getDate()+i);const k=dKey(d);const ss=byDate[k];const cl=ss?colorFor(ss[0].dayName):null;c+='<div class="kal-week-cell'+(k===today?' today':'')+'"'+(cl?' style="border-color:'+cl+'40;background:'+cl+'10"':'')+'>'+  '<div class="kal-week-dow">'+DOW[i]+'</div><div class="kal-week-day">'+d.getDate()+'</div>'+(ss?ss.map(s=>'<div class="kal-week-tag" style="background:'+colorFor(s.dayName)+'22;color:'+colorFor(s.dayName)+'">'+esc(s.dayName||'?')+'</div>').join(''):'')+'</div>';}return '<div class="kal-dow">'+DOW.map(d=>'<span>'+d+'</span>').join('')+'</div><div class="kal-week-grid">'+c+'</div>';}
-      if(kalView==='month'){const y=kalCursor.getFullYear(),m=kalCursor.getMonth();const first=new Date(y,m,1),lead=(first.getDay()+6)%7,dim=new Date(y,m+1,0).getDate();let c='';for(let i=0;i<lead;i++)c+='<div class="kal-cell empty"></div>';for(let d=1;d<=dim;d++){const k=dKey(new Date(y,m,d));const ss=byDate[k];const cl=ss?colorFor(ss[0].dayName):null;c+='<div class="kal-cell'+(k===today?' today':'')+'"'+(cl?' style="background:'+cl+';border-color:'+cl+'"':'')+'>'+  '<span class="kal-day" style="'+(cl?'color:#0a0a0b;font-weight:700':'')+'">'+d+'</span></div>';}return '<div class="kal-dow">'+DOW.map(d=>'<span>'+d+'</span>').join('')+'</div><div class="kal-grid">'+c+'</div>';}
-      let c='';for(let d=new Date(kalCursor.getFullYear(),0,1);d.getFullYear()===kalCursor.getFullYear();d.setDate(d.getDate()+1)){const k=dKey(d);const ss=byDate[k];c+='<div class="kal-year-cell" title="'+k+(ss?' · '+ss[0].dayName:'')+'" style="'+(ss?'background:'+colorFor(ss[0].dayName):'')+'"></div>';}return '<div class="kal-year-grid">'+c+'</div>';}
+    function cellParts(k, ss) {
+      const flags = dayFlags(ss);
+      return { flags: flags, marks: marksHTML(flags), attrs: dayBtnAttrs(k, ss, flags, kalView !== 'year') };
+    }
+    function calHTML() {
+      const today = dKey(new Date());
+      if (kalView === 'week') {
+        const start = sow(kalCursor);
+        let c = '';
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(start);
+          d.setDate(d.getDate() + i);
+          const k = dKey(d);
+          const ss = byDate[k];
+          const cl = ss ? colorFor(ss[0].dayName) : null;
+          const part = cellParts(k, ss);
+          c += '<div class="kal-week-cell' + (k === today ? ' today' : '') + '"' + part.attrs + (cl ? ' style="border-color:' + cl + '40;background:' + cl + '10"' : '') + '>'
+            + part.marks
+            + '<div class="kal-week-dow">' + DOW[i] + '</div><div class="kal-week-day">' + d.getDate() + '</div>'
+            + (ss ? ss.map(function (s) { return '<div class="kal-week-tag" style="background:' + colorFor(s.dayName) + '22;color:' + colorFor(s.dayName) + '">' + esc(s.dayName || '?') + '</div>'; }).join('') : '')
+            + '</div>';
+        }
+        return '<div class="kal-dow">' + DOW.map(function (d) { return '<span>' + d + '</span>'; }).join('') + '</div><div class="kal-week-grid">' + c + '</div>';
+      }
+      if (kalView === 'month') {
+        const y = kalCursor.getFullYear(), m = kalCursor.getMonth();
+        const first = new Date(y, m, 1), lead = (first.getDay() + 6) % 7, dim = new Date(y, m + 1, 0).getDate();
+        let c = '';
+        for (let i = 0; i < lead; i++) c += '<div class="kal-cell empty"></div>';
+        for (let d = 1; d <= dim; d++) {
+          const k = dKey(new Date(y, m, d));
+          const ss = byDate[k];
+          const cl = ss ? colorFor(ss[0].dayName) : null;
+          const part = cellParts(k, ss);
+          c += '<div class="kal-cell' + (k === today ? ' today' : '') + '"' + part.attrs + (cl ? ' style="background:' + cl + ';border-color:' + cl + '"' : '') + '>'
+            + '<span class="kal-day" style="' + (cl ? 'color:#0a0a0b;font-weight:700' : '') + '">' + d + '</span>'
+            + part.marks + '</div>';
+        }
+        return '<div class="kal-dow">' + DOW.map(function (d) { return '<span>' + d + '</span>'; }).join('') + '</div><div class="kal-grid">' + c + '</div>';
+      }
+      let c = '';
+      for (let d = new Date(kalCursor.getFullYear(), 0, 1); d.getFullYear() === kalCursor.getFullYear(); d.setDate(d.getDate() + 1)) {
+        const k = dKey(d);
+        const ss = byDate[k];
+        const part = cellParts(k, ss);
+        c += '<div class="kal-year-cell"' + (part.attrs || (' title="' + esc(k) + '"')) + ' style="' + (ss ? 'background:' + colorFor(ss[0].dayName) : '') + '">' + part.marks + '</div>';
+      }
+      return '<div class="kal-year-grid">' + c + '</div>';
+    }
     const sp=getSP();const byType={};sp.forEach(s=>{const k=s.dayName||'?';byType[k]=(byType[k]||0)+1;});
     const types=Object.keys(byType).sort((a,b)=>byType[b]-byType[a]);const maxT=types.length?Math.max(...types.map(t=>byType[t])):1;
     const perMin=sp.reduce((a,s)=>a+(s.durationMin||0),0);
@@ -2611,17 +2868,103 @@ html, body {
       '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'+[['Sessies',sessions.length],['Uren',(totalMin/60).toFixed(1)+'u'],['Reeks',wkStreak()+'wk']].map(([l,v])=>'<div style="padding:14px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;text-align:center"><div style="font-size:22px;font-weight:700">'+v+'</div><div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-top:4px">'+l+'</div></div>').join('')+'</div>'+
       '<div style="display:flex;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:4px;gap:3px;margin-bottom:12px">'+[['week','Week'],['month','Maand'],['year','Jaar']].map(([v,l])=>'<button class="seg-btn'+(kalView===v?' active':'')+'" data-kalview="'+v+'" style="flex:1;padding:10px;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">'+l+'</button>').join('')+'</div>'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><button onclick="kalShift(-1)" style="width:34px;height:34px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);border-radius:8px;cursor:pointer;font-size:18px">&#8249;</button><span style="font-size:14px;font-weight:700">'+perLbl()+'</span><button onclick="kalShift(1)" style="width:34px;height:34px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);border-radius:8px;cursor:pointer;font-size:18px">&#8250;</button></div>'+
-      '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:14px">'+calHTML()+'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">'+legT.map(t=>'<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.6)"><span style="width:10px;height:10px;border-radius:3px;background:'+typeColors[t]+';display:inline-block"></span>'+esc(t)+'</span>').join('')+'</div></div>'+
+      '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:14px">'+calHTML()+'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">'+legT.map(t=>'<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.6)"><span style="width:10px;height:10px;border-radius:3px;background:'+typeColors[t]+';display:inline-block"></span>'+esc(t)+'</span>').join('')+'</div>'
+      +'<div class="kal-extra-legend"><span class="kal-leg-item"><i class="kal-leg-dot kal-leg-calves" aria-hidden="true"></i>Kuiten</span><span class="kal-leg-item"><i class="kal-leg-dot kal-leg-fore" aria-hidden="true"></i>Onderarmen</span></div>'
+      +'<div class="kal-extra-hint">Tik een gekleurde dag om kuiten of onderarmen aan of uit te zetten.</div></div>'+
       '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:16px"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:12px">'+perLbl().toUpperCase()+' — STATS</div>'+
       '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">'+[['Sessies',sp.length],['Tijd',(perMin/60).toFixed(1)+'u'],['Sets',sp.reduce((a,s)=>a+(s.sets||0),0)]].map(([l,v])=>'<div style="padding:12px 8px;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:10px;text-align:center"><div style="font-size:20px;font-weight:700">'+v+'</div><div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-top:3px">'+l+'</div></div>').join('')+'</div>'+
       (types.length?'<div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px">FOCUS</div>'+types.map(t=>'<div style="margin-bottom:10px"><div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px"><span style="font-size:13px;font-weight:600">'+esc(t)+'</span><span style="font-size:12px;color:var(--text-3)">'+byType[t]+'x</span></div><div style="height:8px;border-radius:999px;background:rgba(255,255,255,0.06);overflow:hidden"><div style="height:100%;width:'+(byType[t]/maxT*100)+'%;background:'+colorFor(t)+';border-radius:999px"></div></div></div>').join(''):
       '<div style="text-align:center;font-size:13px;color:var(--text-3);font-style:italic;padding:16px 0">Nog geen trainingen.</div>')+'</div>';
   };
   window.setKalView=function(v){kalView=v;renderKalTab();};
+  let kalDayBound = false;
+  function fmtDur(min) {
+    min = min || 0;
+    return min >= 60 ? (Math.floor(min / 60) + 'u ' + (min % 60) + 'm') : (min + ' min');
+  }
+  function extraBtn(kind, label, swatch, on, s, idx) {
+    return '<button type="button" class="extra-toggle" data-extra="' + kind + '" data-index="' + idx + '" data-date="' + esc(s.date || '') + '" data-started="' + esc(s.startedAt == null ? '' : s.startedAt) + '" data-ended="' + esc(s.endedAt == null ? '' : s.endedAt) + '" aria-pressed="' + (on ? 'true' : 'false') + '">'
+      + '<span class="extra-swatch ' + swatch + '" aria-hidden="true"></span>'
+      + '<span class="extra-label">' + label + '</span></button>';
+  }
+  function fillKalDay(k) {
+    const gym = loadGym();
+    const sessions = (gym && Array.isArray(gym.sessions)) ? gym.sessions : [];
+    const parts = String(k || '').split('-');
+    const titleEl = document.getElementById('kalDayTitle');
+    const body = document.getElementById('kalDayBody');
+    if (!titleEl || !body) return 0;
+    titleEl.textContent = parts.length === 3
+      ? (parseInt(parts[2], 10) + ' ' + (MON[parseInt(parts[1], 10) - 1] || '') + ' ' + parts[0])
+      : k;
+    let html = '';
+    let n = 0;
+    sessions.forEach(function (s, idx) {
+      if (!s || !s.date) return;
+      if (dKey(new Date(s.date)) !== k) return;
+      n++;
+      html += '<div class="kal-day-card">'
+        + '<div class="kal-day-name">' + esc(s.dayName || 'Training') + '</div>'
+        + '<div class="kal-day-meta">' + esc(fmtDur(s.durationMin)) + ' · ' + (s.sets || 0) + ' sets</div>'
+        + '<div class="kal-day-toggles">'
+        + extraBtn('calves', 'Kuiten gedaan', 'extra-swatch-calves', showsCalves(s), s, idx)
+        + extraBtn('forearms', 'Onderarmen gedaan', 'extra-swatch-fore', showsFore(s), s, idx)
+        + '</div></div>';
+    });
+    body.innerHTML = html;
+    return n;
+  }
+  function openKalDay(k) {
+    const modal = document.getElementById('kalDayModal');
+    if (!modal) return;
+    if (!fillKalDay(k)) { modal.style.display = 'none'; return; }
+    modal.style.display = 'flex';
+    modal.dataset.date = k;
+    if (kalDayBound) return;
+    kalDayBound = true;
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) modal.style.display = 'none';
+    });
+    document.getElementById('kalDayClose').addEventListener('click', function () {
+      modal.style.display = 'none';
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && modal.style.display === 'flex') modal.style.display = 'none';
+    });
+    document.getElementById('kalDayBody').addEventListener('click', function (e) {
+      const btn = e.target.closest('[data-extra]');
+      if (!btn) return;
+      const next = btn.getAttribute('aria-pressed') !== 'true';
+      const patch = {};
+      patch[btn.dataset.extra] = next;
+      const kind = btn.dataset.extra;
+      const idx = btn.dataset.index;
+      const ok = window.__maxxGymSetExtras && window.__maxxGymSetExtras({
+        index: parseInt(idx, 10),
+        date: btn.dataset.date,
+        startedAt: btn.dataset.started,
+        endedAt: btn.dataset.ended
+      }, patch);
+      if (!ok) return;
+      fillKalDay(modal.dataset.date);
+      renderKalTab();
+      const again = document.querySelector('#kalDayBody [data-extra="' + kind + '"][data-index="' + idx + '"]');
+      if (again) again.focus();
+    });
+  }
   // Wire seg buttons (can't use onclick in template strings with variables)
   document.addEventListener('click', function(e) {
     const b = e.target.closest('[data-kalview]');
-    if (b) { kalView = b.dataset.kalview; renderKalTab(); }
+    if (b) { kalView = b.dataset.kalview; renderKalTab(); return; }
+    const day = e.target.closest('[data-kalday]');
+    if (day) openKalDay(day.dataset.kalday);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const day = e.target.closest && e.target.closest('[data-kalday]');
+    if (!day) return;
+    e.preventDefault();
+    openKalDay(day.dataset.kalday);
   });
   window.kalShift=function(d){if(kalView==='week')kalCursor.setDate(kalCursor.getDate()+d*7);else if(kalView==='month')kalCursor.setMonth(kalCursor.getMonth()+d);else kalCursor.setFullYear(kalCursor.getFullYear()+d);renderKalTab();};
 })();
@@ -2917,14 +3260,33 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
+<div class="modal-bg" id="kalDayModal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="kalDayTitle">
+  <div class="kal-day-sheet">
+    <div class="kal-day-kicker">Dag</div>
+    <div class="kal-day-title" id="kalDayTitle"></div>
+    <div id="kalDayBody"></div>
+    <button type="button" class="kal-day-close" id="kalDayClose">Sluiten</button>
+  </div>
+</div>
 <!-- Training end confirmation modal -->
 <div class="modal-bg" id="sessionEndModal" style="display:none;z-index:1000;background:rgba(0,0,0,0.9)">
-  <div style="background:#0a0a0b;border:1px solid rgba(240,136,62,0.3);border-radius:16px;padding:32px;max-width:340px;text-align:center">
+  <div style="background:#0a0a0b;border:1px solid rgba(240,136,62,0.3);border-radius:16px;padding:28px 22px;max-width:360px;width:100%;text-align:center;max-height:90vh;overflow-y:auto">
     <div style="font-size:14px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px">Training afgerond</div>
     <div style="font-size:48px;font-weight:700;color:#f0883e;margin-bottom:8px" id="endStats_duration">0 min</div>
-    <div style="font-size:13px;color:var(--text-2);margin-bottom:32px;line-height:1.8">
+    <div style="font-size:13px;color:var(--text-2);margin-bottom:18px;line-height:1.8">
       <div id="endStats_sets">0 sets</div>
       <div id="endStats_day" style="font-size:11px;color:var(--text-3);margin-top:8px">—</div>
+    </div>
+    <div class="end-extras">
+      <div class="end-extras-label">Ook gedaan</div>
+      <button type="button" class="extra-toggle" id="endCalvesToggle" aria-pressed="false">
+        <span class="extra-swatch extra-swatch-calves" aria-hidden="true"></span>
+        <span class="extra-label">Kuiten gedaan</span>
+      </button>
+      <button type="button" class="extra-toggle" id="endForeToggle" aria-pressed="false">
+        <span class="extra-swatch extra-swatch-fore" aria-hidden="true"></span>
+        <span class="extra-label">Onderarmen gedaan</span>
+      </button>
     </div>
     <button id="endConfirmBtn" style="width:100%;padding:16px;background:#f0883e;color:#0a0a0b;border:none;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer;margin-bottom:10px;transition:all 0.2s">Opslaan</button>
     <button id="endCancelBtn" style="width:100%;padding:16px;background:transparent;color:var(--text-2);border:1px solid var(--border);border-radius:12px;font-weight:600;font-size:16px;cursor:pointer;transition:all 0.2s">Annuleren</button>
